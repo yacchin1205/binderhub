@@ -9,6 +9,10 @@ spec:
   {{ if .Values.service.loadBalancerIP -}}
   loadBalancerIP: {{ .Values.service.loadBalancerIP | quote }}
   {{- end }}
+  {{- if and (eq .Values.service.type "LoadBalancer") .Values.service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+    {{- .Values.service.loadBalancerSourceRanges | toYaml | trimSuffix "\n" | nindent 4 }}
+  {{- end }}
   selector:
     app: binder
     name: binder

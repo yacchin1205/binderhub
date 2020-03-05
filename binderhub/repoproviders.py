@@ -108,7 +108,7 @@ class RepoProvider(LoggingConfigurable):
     )
 
     @property
-    def rdm_hosts():
+    def rdm_hosts(self):
         """
         Return list for RDM_HOSTS_JSON environment variable
         """
@@ -930,7 +930,7 @@ class RDMProvider(RepoProvider):
         self.hostname = urllib.parse.urlparse(self.repo).netloc.split(':')[0]
 
     @property
-    def rdm_hosts():
+    def rdm_hosts(self):
         return self.hosts
 
     async def get_resolved_ref(self):

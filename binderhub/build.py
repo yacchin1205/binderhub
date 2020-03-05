@@ -38,7 +38,7 @@ class Build:
     """
     def __init__(self, q, api, name, namespace, repo_url, ref, git_credentials, build_image,
                  image_name, push_secret, memory_limit, docker_host, node_selector,
-                 appendix='', log_tail_lines=100, sticky_builds=False):
+                 appendix='', log_tail_lines=100, sticky_builds=False, rdm_hosts=None):
         self.q = q
         self.api = api
         self.repo_url = repo_url
@@ -57,6 +57,7 @@ class Build:
 
         self.stop_event = threading.Event()
         self.git_credentials = git_credentials
+        self.rdm_hosts = rdm_hosts
 
         self.sticky_builds = sticky_builds
 
@@ -234,6 +235,8 @@ class Build:
         env = []
         if self.git_credentials:
             env.append(client.V1EnvVar(name='GIT_CREDENTIAL_ENV', value=self.git_credentials))
+        if self.rdm_hosts is not None:
+            env.append(client.V1EnvVar(name='RDM_HOSTS_JSON', value=json.dumps(self.rdm_hosts)))
 
         self.pod = client.V1Pod(
             metadata=client.V1ObjectMeta(

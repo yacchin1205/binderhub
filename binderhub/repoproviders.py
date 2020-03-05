@@ -107,6 +107,13 @@ class RepoProvider(LoggingConfigurable):
         config=True
     )
 
+    @property
+    def rdm_hosts():
+        """
+        Return list for RDM_HOSTS_JSON environment variable
+        """
+        return None
+
     def is_banned(self):
         """
         Return true if the given spec has been banned
@@ -899,3 +906,45 @@ class GistRepoProvider(GitHubRepoProvider):
 
     def get_build_slug(self):
         return self.gist_id
+
+
+class RDMProvider(RepoProvider):
+    """GakuNin RDM provider
+    """
+
+    name = Unicode('RDM')
+
+    hosts = List(config=True,
+        help="""RDM hosts
+        Loaded from RDM_HOSTS_JSON env by default."""
+    )
+    @default('hosts')
+    def _private_token_default(self):
+        return json.loads(os.getenv('RDM_HOSTS_JSON', '[]'))
+
+    def __init__(self, *args, **kwargs):
+        # We dont need to initialize entirely the same as github
+        super(RepoProvider, self).__init__(*args, **kwargs)
+        self.url, self.ref = self.spec.split('/', 1)
+        self.repo = urllib.parse.unquote(self.url)
+        self.hostname = urllib.parse.urlparse(self.repo).netloc.split(':')[0]
+
+    @property
+    def rdm_hosts():
+        return self.hosts
+
+    async def get_resolved_ref(self):
+        return self.ref
+
+    async def get_resolved_spec(self):
+        return self.spec
+
+    def get_repo_url(self):
+        return self.repo
+
+    async def get_resolved_ref_url(self):
+        return self.get_repo_url()
+
+    def get_build_slug(self):
+        build_slug = '{}-{}'.format(self.hostname, urllib.parse.quote(self.ref))
+        return re.sub(r'[^\-\.A-Za-z0-9]', '-', build_slug)

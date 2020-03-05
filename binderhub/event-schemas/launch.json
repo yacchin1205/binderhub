@@ -14,7 +14,8 @@
                 "Zenodo",
                 "Figshare",
                 "Hydroshare",
-                "Dataverse"
+                "Dataverse",
+                "RDM"
             ],
             "description": "Provider for the repository being launched"
         },

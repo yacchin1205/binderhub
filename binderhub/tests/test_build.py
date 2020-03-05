@@ -136,3 +136,37 @@ def test_git_credentials_passed_to_podspec_upon_submit():
     }
 
     assert env['GIT_CREDENTIAL_ENV'] == git_credentials
+
+
+def test_rdm_hosts_passed_to_podspec_upon_submit():
+    rdm_hosts = [{
+        'hostname': ['https://test.jp'],
+        'api': 'https://api.test.jp',
+    }]
+    build = Build(
+        mock.MagicMock(), api=mock.MagicMock(), name='test_build',
+        namespace='build_namespace', repo_url=mock.MagicMock(), ref=mock.MagicMock(),
+        git_credentials=None,
+        rdm_hosts=rdm_hosts, build_image=mock.MagicMock(),
+        image_name=mock.MagicMock(), push_secret=mock.MagicMock(),
+        memory_limit=mock.MagicMock(), docker_host='http://mydockerregistry.local',
+        node_selector=mock.MagicMock())
+
+    with mock.patch.object(build, 'api') as api_patch, \
+            mock.patch.object(build.stop_event, 'is_set', return_value=True):
+        build.submit()
+
+    call_args_list = api_patch.create_namespaced_pod.call_args_list
+    assert len(call_args_list) == 1
+
+    args = call_args_list[0][0]
+    pod = args[1]
+
+    assert len(pod.spec.containers) == 1
+
+    env = {
+        env_var.name: env_var.value
+        for env_var in pod.spec.containers[0].env
+    }
+
+    assert json.loads(env['RDM_HOSTS_JSON']) == rdm_hosts

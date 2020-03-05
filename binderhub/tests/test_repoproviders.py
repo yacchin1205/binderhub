@@ -7,7 +7,7 @@ from tornado.ioloop import IOLoop
 from binderhub.repoproviders import (
     tokenize_spec, strip_suffix, GitHubRepoProvider, GitRepoProvider,
     GitLabRepoProvider, GistRepoProvider, ZenodoProvider, FigshareProvider,
-    HydroshareProvider, DataverseProvider
+    HydroshareProvider, DataverseProvider, RDMProvider
 )
 
 
@@ -155,6 +155,28 @@ async def test_dataverse(spec, resolved_spec, resolved_ref, resolved_ref_url, bu
     ref_url = await provider.get_resolved_ref_url()
     assert ref_url == resolved_ref_url
     spec = await provider.get_resolved_spec()
+    assert spec == resolved_spec
+
+
+@pytest.mark.parametrize('spec,resolved_ref,repo_url,build_slug', [
+    ['https%3A%2F%2Fsome.host.test.jp%2Fpwad2/testprovider/testdir',
+     'testprovider/testdir',
+     'https://some.host.test.jp/pwad2',
+     'some.host.test.jp-testprovider-testdir'],
+])
+async def test_rdm(spec, resolved_ref, repo_url, build_slug):
+    provider = RDMProvider(spec=spec)
+
+    # have to resolve the ref first
+    ref = await provider.get_resolved_ref()
+    assert ref == resolved_ref
+
+    slug = provider.get_build_slug()
+    assert slug == build_slug
+    assert provider.get_repo_url() == repo_url
+    ref_url = await provider.get_resolved_ref_url()
+    assert ref_url == repo_url
+    resolved_spec = await provider.get_resolved_spec()
     assert spec == resolved_spec
 
 

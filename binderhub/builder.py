@@ -363,6 +363,7 @@ class BuildHandler(BaseHandler):
             appendix=appendix,
             log_tail_lines=self.settings['log_tail_lines'],
             git_credentials=provider.git_credentials,
+            rdm_hosts=provider.rdm_hosts,
             sticky_builds=self.settings['sticky_builds'],
         )
 

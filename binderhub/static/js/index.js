@@ -230,6 +230,11 @@ function build(providerSpec, log, path, pathType) {
     image.launch(data.url, data.token, path, pathType);
   });
 
+  image.onStateChange('auth', function(oldState, newState, data) {
+    // Authorization required for repository access
+    window.location.href = data.authorization_url;
+  });
+
   image.fetch();
   return image;
 }

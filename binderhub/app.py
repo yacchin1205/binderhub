@@ -8,6 +8,7 @@ import logging
 import os
 import re
 from glob import glob
+import tempfile
 from urllib.parse import urlparse
 
 import kubernetes.client
@@ -40,6 +41,8 @@ from .metrics import MetricsHandler
 
 from .utils import ByteSpecification, url_path_join
 from .events import EventLog
+
+from .repoauth import RepoAuthCallbackHandler
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -508,6 +511,12 @@ class BinderHub(Application):
         help='Origin to use when emitting events. Defaults to hostname of request when empty'
     )
 
+    repo_token_store = Unicode(
+        '',
+        config=True,
+        help='SQLite file to store tokens for repoproviders'
+    )
+
     @staticmethod
     def add_url_prefix(prefix, handlers):
         """add a url prefix to handlers"""
@@ -587,6 +596,10 @@ class BinderHub(Application):
             with open(schema_file) as f:
                 self.event_log.register_schema(json.load(f))
 
+        repo_token_store = self.repo_token_store
+        if len(repo_token_store) == 0:
+            repo_token_store = os.path.join(tempfile.mkdtemp(), 'tokenstore.db')
+
         self.tornado_settings.update({
             "push_secret": self.push_secret,
             "image_prefix": self.image_prefix,
@@ -622,7 +635,8 @@ class BinderHub(Application):
             'executor': self.executor,
             'auth_enabled': self.auth_enabled,
             'event_log': self.event_log,
-            'normalized_origin': self.normalized_origin
+            'normalized_origin': self.normalized_origin,
+            'repo_token_store': repo_token_store,
         })
         if self.auth_enabled:
             self.tornado_settings['cookie_secret'] = os.urandom(32)
@@ -630,7 +644,7 @@ class BinderHub(Application):
         handlers = [
             (r'/metrics', MetricsHandler),
             (r'/versions', VersionHandler),
-            (r"/build/([^/]+)/(.+)", BuildHandler),
+            (r"/build/([^/]+)/(.+)", BuildHandler, {'hub_url': self.hub_url}),
             (r"/v2/([^/]+)/(.+)", ParameterizedMainHandler),
             (r"/repo/([^/]+)/([^/]+)(/.*)?", LegacyRedirectHandler),
             # for backward-compatible mybinder.org badge URLs
@@ -662,6 +676,7 @@ class BinderHub(Application):
                 {'path': os.path.join(self.tornado_settings['static_path'], 'images')}),
             (r'/about', AboutHandler),
             (r'/health', HealthHandler, {'hub_url': self.hub_internal_url}),
+            (r'/repoauth/callback', RepoAuthCallbackHandler, {'hub_url': self.hub_url}),
             (r'/', MainHandler),
             (r'.*', Custom404),
         ]

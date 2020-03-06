@@ -26,6 +26,7 @@ from traitlets import Dict, Unicode, Bool, default, List
 from traitlets.config import LoggingConfigurable
 
 from .utils import Cache
+from .repoauth import OAuth2Client
 
 GITHUB_RATE_LIMIT = Gauge('binderhub_github_rate_limit_remaining', 'GitHub rate limit remaining')
 SHA1_PATTERN = re.compile(r'[0-9a-f]{40}')
@@ -110,6 +111,24 @@ class RepoProvider(LoggingConfigurable):
     def get_optional_envs(self, token=None):
         """
         Return dict of environment variable for repo2docker
+        """
+        return None
+
+    def get_authorization_provider(self):
+        """
+        Return an identifier of an authorization service
+        """
+        return None
+
+    def get_authorization_url(self, hub_url):
+        """
+        Return an authorization URL of an authorization service
+        """
+        return None
+
+    def fetch_authorized_token(self, authorization_response, hub_url):
+        """
+        Return a token using authorization_response
         """
         return None
 
@@ -931,6 +950,17 @@ class RDMProvider(RepoProvider):
     def get_optional_envs(self, token=None):
         return {'RDM_HOSTS_JSON': json.dumps(self.hosts)}
 
+    def get_authorization_provider(self):
+        return self.hostname
+
+    def get_authorization_url(self, state, hub_url):
+        client = OAuth2Client(self._find_host(self.hostname))
+        return client.get_authorization_url(state, hub_url)
+
+    def fetch_authorized_token(self, authorization_response, hub_url):
+        client = OAuth2Client(self._find_host(self.hostname))
+        return client.fetch_token(authorization_response, hub_url)
+
     async def get_resolved_ref(self):
         return self.ref
 
@@ -946,3 +976,10 @@ class RDMProvider(RepoProvider):
     def get_build_slug(self):
         build_slug = '{}-{}'.format(self.hostname, urllib.parse.quote(self.ref))
         return re.sub(r'[^\-\.A-Za-z0-9]', '-', build_slug)
+
+    def _find_host(self, target_host):
+        for host in self.hosts:
+            if any([urllib.parse.urlparse(h).netloc.split(':')[0] == target_host
+                    for h in host['hostname']]):
+                return host
+        raise ValueError('Host not found: {}'.format(target_host))

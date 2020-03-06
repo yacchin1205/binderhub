@@ -107,10 +107,9 @@ class RepoProvider(LoggingConfigurable):
         config=True
     )
 
-    @property
-    def rdm_hosts(self):
+    def get_optional_envs(self, token=None):
         """
-        Return list for RDM_HOSTS_JSON environment variable
+        Return dict of environment variable for repo2docker
         """
         return None
 
@@ -929,9 +928,8 @@ class RDMProvider(RepoProvider):
         self.repo = urllib.parse.unquote(self.url)
         self.hostname = urllib.parse.urlparse(self.repo).netloc.split(':')[0]
 
-    @property
-    def rdm_hosts(self):
-        return self.hosts
+    def get_optional_envs(self, token=None):
+        return {'RDM_HOSTS_JSON': json.dumps(self.hosts)}
 
     async def get_resolved_ref(self):
         return self.ref

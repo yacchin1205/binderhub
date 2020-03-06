@@ -143,11 +143,12 @@ def test_rdm_hosts_passed_to_podspec_upon_submit():
         'hostname': ['https://test.jp'],
         'api': 'https://api.test.jp',
     }]
+    optional_envs = {'RDM_HOSTS_JSON': json.dumps(rdm_hosts)}
     build = Build(
         mock.MagicMock(), api=mock.MagicMock(), name='test_build',
         namespace='build_namespace', repo_url=mock.MagicMock(), ref=mock.MagicMock(),
         git_credentials=None,
-        rdm_hosts=rdm_hosts, build_image=mock.MagicMock(),
+        optional_envs=optional_envs, build_image=mock.MagicMock(),
         image_name=mock.MagicMock(), push_secret=mock.MagicMock(),
         memory_limit=mock.MagicMock(), docker_host='http://mydockerregistry.local',
         node_selector=mock.MagicMock())

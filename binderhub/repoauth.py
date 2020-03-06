@@ -26,24 +26,25 @@ class TokenStore(object):
             c.close()
             return
         c.execute("""CREATE TABLE repo_session
-            (user text, provider_id text, token text, state text, acquired timestamp,
-             expires timestamp, provider_name text, spec text);""")
+            (user text, provider_id text, access_token text,
+             state text, acquired timestamp, expires timestamp,
+             provider_name text, spec text);""")
         self.connect.commit()
         c.close()
 
-    def get_token_for(self, user, provider_name, provider_id):
+    def get_access_token_for(self, user, provider_name, provider_id):
         c = self.connect.cursor()
-        c.execute("""SELECT token, expires FROM repo_session
-            WHERE user=? AND provider_name=? AND provider_id=? AND token IS NOT NULL;""",
+        c.execute("""SELECT access_token, expires FROM repo_session
+            WHERE user=? AND provider_name=? AND provider_id=? AND access_token IS NOT NULL;""",
                   (user, provider_name, provider_id))
         result = c.fetchone()
         c.close()
         if result is None:
             return None
-        token, expires = result
+        access_token, expires = result
         if expires < datetime.utcnow():
             return None
-        return token
+        return access_token
 
     def new_session(self, spec, user, provider_name, provider_id):
         logger.info('User: {}, Provider: {}'.format(user, provider_id))
@@ -63,12 +64,12 @@ class TokenStore(object):
         c.close()
         return (provider_name, spec)
 
-    def register_token(self, user, state, token, expires):
+    def register_token(self, user, state, access_token, expires):
         c = self.connect.cursor()
         c.execute("""UPDATE repo_session
-            SET token=?, acquired=?, expires=?
-            WHERE user=? AND state=? AND token IS NULL;""",
-                  (token, datetime.utcnow(), expires,
+            SET access_token=?, acquired=?, expires=?
+            WHERE user=? AND state=? AND access_token IS NULL;""",
+                  (access_token, datetime.utcnow(), expires,
                    user, state))
         self.connect.commit()
         c.execute("""SELECT spec FROM repo_session
@@ -121,5 +122,7 @@ class RepoAuthCallbackHandler(BaseHandler):
         token = provider.fetch_authorized_token(self.request.uri, self.hub_url)
         expires = datetime.utcfromtimestamp(token['expires_at'])
         logger.info('Token: {}'.format(expires))
-        spec = self.tokenstore.register_token(user, state, token['access_token'], expires)
+        spec = self.tokenstore.register_token(user, state,
+                                              token['access_token'],
+                                              expires)
         self.redirect(url_path_join(self.hub_url, '/v2', provider_name, spec))

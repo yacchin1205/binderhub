@@ -7,6 +7,7 @@ control services and providers.
 .. note:: When adding a new repo provider, add it to the allowed values for
           repo providers in event-schemas/launch.json.
 """
+from copy import deepcopy
 from datetime import timedelta, datetime, timezone
 import json
 import os
@@ -108,7 +109,7 @@ class RepoProvider(LoggingConfigurable):
         config=True
     )
 
-    def get_optional_envs(self, token=None):
+    def get_optional_envs(self, access_token=None):
         """
         Return dict of environment variable for repo2docker
         """
@@ -947,8 +948,13 @@ class RDMProvider(RepoProvider):
         self.repo = urllib.parse.unquote(self.url)
         self.hostname = urllib.parse.urlparse(self.repo).netloc.split(':')[0]
 
-    def get_optional_envs(self, token=None):
-        return {'RDM_HOSTS_JSON': json.dumps(self.hosts)}
+    def get_optional_envs(self, access_token=None):
+        hosts = deepcopy(self.hosts)
+        for host in hosts:
+            if any([urllib.parse.urlparse(h).netloc.split(':')[0] == self.hostname
+                    for h in host['hostname']]):
+                host['token'] = access_token
+        return {'RDM_HOSTS_JSON': json.dumps(hosts)}
 
     def get_authorization_provider(self):
         return self.hostname

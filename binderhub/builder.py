@@ -248,7 +248,9 @@ class BuildHandler(BaseHandler):
         if auth_provider_id is not None and self.settings['auth_enabled']:
             # Need authorization
             user = self.get_current_user()
-            auth_token = self.tokenstore.get_token_for(user, provider_prefix, auth_provider_id)
+            auth_token = self.tokenstore.get_access_token_for(user,
+                                                              provider_prefix,
+                                                              auth_provider_id)
             if auth_token is None:
                 state = self.tokenstore.new_session(spec, user, provider_prefix, auth_provider_id)
                 auth_url = provider.get_authorization_url(state, self.hub_url)
@@ -383,7 +385,7 @@ class BuildHandler(BaseHandler):
             appendix=appendix,
             log_tail_lines=self.settings['log_tail_lines'],
             git_credentials=provider.git_credentials,
-            optional_envs=provider.get_optional_envs(token=auth_token),
+            optional_envs=provider.get_optional_envs(access_token=auth_token),
             sticky_builds=self.settings['sticky_builds'],
         )
 

@@ -87,21 +87,21 @@ class OAuth2Client(object):
     def __init__(self, host):
         self.host = host
 
-    def get_authorization_url(self, state, hub_url):
-        session = self._create_session(hub_url)
+    def get_authorization_url(self, state, binderhub_url):
+        session = self._create_session(binderhub_url)
         auth_url, _ = session.authorization_url(self.host['oauth_authorize_url'],
                                                 state=state)
         return auth_url
 
-    def fetch_token(self, authorization_response, hub_url):
-        session = self._create_session(hub_url)
+    def fetch_token(self, authorization_response, binderhub_url):
+        session = self._create_session(binderhub_url)
         return session.fetch_token(self.host['oauth_token_url'],
                                    authorization_response=authorization_response,
                                    client_secret=self.host['client_secret'],
                                    include_client_id=True)
 
-    def _create_session(self, hub_url):
-        redirect_uri = url_path_join(hub_url, '/repoauth/callback')
+    def _create_session(self, binderhub_url):
+        redirect_uri = url_path_join(binderhub_url, '/repoauth/callback')
         return OAuth2Session(self.host['client_id'],
                              redirect_uri=redirect_uri,
                              scope=['osf.full_read'])
@@ -110,9 +110,9 @@ class OAuth2Client(object):
 class RepoAuthCallbackHandler(BaseHandler):
     """A callback handler for authorization for repositories"""
 
-    def initialize(self, hub_url):
+    def initialize(self, binderhub_url):
         super().initialize()
-        self.hub_url = hub_url
+        self.binderhub_url = binderhub_url
         self.tokenstore = TokenStore(self.settings['repo_token_store'])
 
     @authenticated
@@ -122,10 +122,10 @@ class RepoAuthCallbackHandler(BaseHandler):
         user = self.get_current_user()
         provider_name, spec = self.tokenstore.get_session(user, state)
         provider = self.get_provider(provider_name, spec)
-        token = provider.fetch_authorized_token(self.request.uri, self.hub_url)
+        token = provider.fetch_authorized_token(self.request.uri, self.binderhub_url)
         expires = datetime.utcfromtimestamp(token['expires_at'])
         logger.info('Token: {}'.format(expires))
         spec = self.tokenstore.register_token(user, state,
                                               token['access_token'],
                                               expires)
-        self.redirect(url_path_join(self.hub_url, '/v2', provider_name, spec))
+        self.redirect(url_path_join(self.binderhub_url, '/v2', provider_name, spec))

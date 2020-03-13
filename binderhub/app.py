@@ -358,6 +358,15 @@ class BinderHub(Application):
     def _default_hub_token(self):
         return os.environ.get('JUPYTERHUB_API_TOKEN', '')
 
+    binderhub_url = Unicode(
+        help="""
+        The base URL of the BinderHub instance.
+
+        e.g. https://mybinder.org/
+        """,
+        config=True,
+    )
+
     hub_url = Unicode(
         help="""
         The base URL of the JupyterHub instance where users will run.
@@ -644,7 +653,7 @@ class BinderHub(Application):
         handlers = [
             (r'/metrics', MetricsHandler),
             (r'/versions', VersionHandler),
-            (r"/build/([^/]+)/(.+)", BuildHandler, {'hub_url': self.hub_url}),
+            (r"/build/([^/]+)/(.+)", BuildHandler, {'binderhub_url': self.binderhub_url}),
             (r"/v2/([^/]+)/(.+)", ParameterizedMainHandler),
             (r"/repo/([^/]+)/([^/]+)(/.*)?", LegacyRedirectHandler),
             # for backward-compatible mybinder.org badge URLs
@@ -676,7 +685,7 @@ class BinderHub(Application):
                 {'path': os.path.join(self.tornado_settings['static_path'], 'images')}),
             (r'/about', AboutHandler),
             (r'/health', HealthHandler, {'hub_url': self.hub_internal_url}),
-            (r'/repoauth/callback', RepoAuthCallbackHandler, {'hub_url': self.hub_url}),
+            (r'/repoauth/callback', RepoAuthCallbackHandler, {'binderhub_url': self.binderhub_url}),
             (r'/', MainHandler),
             (r'.*', Custom404),
         ]

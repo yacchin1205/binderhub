@@ -120,13 +120,13 @@ class BuildHandler(BaseHandler):
         self.write('data: {}\n\n'.format(evt))
         self.finish()
 
-    def initialize(self, hub_url=None):
+    def initialize(self, binderhub_url=None):
         super().initialize()
         if self.settings['use_registry']:
             self.registry = self.settings['registry']
 
         self.event_log = self.settings['event_log']
-        self.hub_url = hub_url
+        self.binderhub_url = binderhub_url
         self.tokenstore = TokenStore(self.settings['repo_token_store'])
 
     def _generate_build_name(self, build_slug, ref, prefix='', limit=63, ref_length=6):
@@ -253,7 +253,7 @@ class BuildHandler(BaseHandler):
                                                               auth_provider_id)
             if auth_token is None:
                 state = self.tokenstore.new_session(spec, user, provider_prefix, auth_provider_id)
-                auth_url = provider.get_authorization_url(state, self.hub_url)
+                auth_url = provider.get_authorization_url(state, self.binderhub_url)
                 await self.emit({
                     'phase': 'auth',
                     'message': 'Authorization required...\n',

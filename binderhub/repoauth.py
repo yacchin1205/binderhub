@@ -118,11 +118,12 @@ class RepoAuthCallbackHandler(BaseHandler):
     @authenticated
     async def get(self):
         state = self.get_query_argument('state')
-        logger.info('Callback: {}, state={}'.format(self.request.uri, state))
+        auth_resp = self.binderhub_url + self.request.uri
+        logger.info('Callback: {}, state={}'.format(auth_resp, state))
         user = self.get_current_user()
         provider_name, spec = self.tokenstore.get_session(user, state)
         provider = self.get_provider(provider_name, spec)
-        token = provider.fetch_authorized_token(self.request.uri, self.binderhub_url)
+        token = provider.fetch_authorized_token(auth_resp, self.binderhub_url)
         expires = datetime.utcfromtimestamp(token['expires_at'])
         logger.info('Token: {}'.format(expires))
         spec = self.tokenstore.register_token(user, state,

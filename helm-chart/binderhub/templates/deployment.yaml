@@ -122,3 +122,10 @@ spec:
           initialDelaySeconds: 10
           periodSeconds: 5
           timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: {{ default "/" .Values.config.BinderHub.base_url }}about
+            port: binder
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 10

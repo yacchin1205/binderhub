@@ -33,6 +33,8 @@ class TokenStore(object):
         c.close()
 
     def get_access_token_for(self, user, provider_name, provider_id):
+        logger.info('User: {}'.format(user))
+        logger.info('User(type): {}'.format(type(user)))
         c = self.connect.cursor()
         c.execute("""SELECT access_token, expires FROM repo_session
             WHERE user=? AND provider_name=? AND provider_id=? AND access_token IS NOT NULL;""",

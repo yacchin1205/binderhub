@@ -34,11 +34,10 @@ class TokenStore(object):
 
     def get_access_token_for(self, user, provider_name, provider_id):
         logger.info('User: {}'.format(user))
-        logger.info('User(type): {}'.format(type(user)))
         c = self.connect.cursor()
         c.execute("""SELECT access_token, expires FROM repo_session
             WHERE user=? AND provider_name=? AND provider_id=? AND access_token IS NOT NULL;""",
-                  (user, provider_name, provider_id))
+                  (user['name'], provider_name, provider_id))
         result = c.fetchone()
         c.close()
         if result is None:
@@ -53,29 +52,31 @@ class TokenStore(object):
         state = str(uuid.uuid1())
         c = self.connect.cursor()
         c.execute("""INSERT INTO repo_session (user, provider_name, provider_id, state, spec)
-            VALUES (?, ?, ?, ?, ?);""", (user, provider_name, provider_id, state, spec))
+            VALUES (?, ?, ?, ?, ?);""", (user['name'], provider_name, provider_id, state, spec))
         self.connect.commit()
         c.close()
         return state
 
     def get_session(self, user, state):
+        logger.info('User: {}'.format(user))
         c = self.connect.cursor()
         c.execute("""SELECT provider_name, spec FROM repo_session
-            WHERE user=? AND state=?;""", (user, state))
+            WHERE user=? AND state=?;""", (user['name'], state))
         provider_name, spec = c.fetchone()
         c.close()
         return (provider_name, spec)
 
     def register_token(self, user, state, access_token, expires):
+        logger.info('User: {}'.format(user))
         c = self.connect.cursor()
         c.execute("""UPDATE repo_session
             SET access_token=?, acquired=?, expires=?
             WHERE user=? AND state=? AND access_token IS NULL;""",
                   (access_token, datetime.utcnow(), expires,
-                   user, state))
+                   user['name'], state))
         self.connect.commit()
         c.execute("""SELECT spec FROM repo_session
-            WHERE user=? AND state=?;""", (user, state))
+            WHERE user=? AND state=?;""", (user['name'], state))
         spec = c.fetchone()[0]
         c.close()
         return spec

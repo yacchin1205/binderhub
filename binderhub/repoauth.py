@@ -41,9 +41,11 @@ class TokenStore(object):
         result = c.fetchone()
         c.close()
         if result is None:
+            logger.info('User: {}, No token'.format(user))
             return None
         access_token, expires = result
         if expires < datetime.utcnow():
+            logger.info('User: {}, Token expired: expires={}, now={}'.format(user, expires, datetime.utcnow()))
             return None
         return access_token
 

@@ -26,3 +26,6 @@ spec:
       {{ if .Values.service.nodePort -}}
       nodePort: {{ .Values.service.nodePort }}
       {{- end }}
+      {{ if .Values.service.portName -}}
+      name: {{ .Values.service.portName }}
+      {{- end }}

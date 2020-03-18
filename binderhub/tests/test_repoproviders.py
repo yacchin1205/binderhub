@@ -2,6 +2,7 @@ from unittest import TestCase
 
 from urllib.parse import quote
 import pytest
+import re
 from tornado.ioloop import IOLoop
 
 from binderhub.repoproviders import (
@@ -159,17 +160,24 @@ async def test_dataverse(spec, resolved_spec, resolved_ref, resolved_ref_url, bu
 
 
 @pytest.mark.parametrize('spec,resolved_ref,repo_url,build_slug', [
-    ['https%3A%2F%2Fsome.host.test.jp%2Fpwad2/testprovider/testdir',
-     'testprovider/testdir',
+    ['https%3A%2F%2Fsome.host.test.jp%2Fpwad2/',
+     None,
      'https://some.host.test.jp/pwad2',
-     'some.host.test.jp-testprovider-testdir'],
+     'https---some.host.test.jp-pwad2'],
+    ['https%3A%2F%2Fsome.host.test.jp%2Fpwad2%2Ffiles%2Ftestprovider%2Ftestdir/',
+     None,
+     'https://some.host.test.jp/pwad2/files/testprovider/testdir',
+     'https---some.host.test.jp-pwad2-files-testprovider-testdir'],
 ])
 async def test_rdm(spec, resolved_ref, repo_url, build_slug):
     provider = RDMProvider(spec=spec)
 
     # have to resolve the ref first
     ref = await provider.get_resolved_ref()
-    assert ref == resolved_ref
+    if resolved_ref is not None:
+        assert ref == resolved_ref
+    else:
+        assert re.match(r'^[0-9A-Fa-f\-]+$', ref) is not None
 
     slug = provider.get_build_slug()
     assert slug == build_slug

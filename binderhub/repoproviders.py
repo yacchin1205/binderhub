@@ -15,6 +15,7 @@ import time
 import urllib.parse
 import re
 import subprocess
+from uuid import uuid1
 
 import escapism
 from prometheus_client import Gauge
@@ -944,8 +945,8 @@ class RDMProvider(RepoProvider):
     def __init__(self, *args, **kwargs):
         # We dont need to initialize entirely the same as github
         super(RepoProvider, self).__init__(*args, **kwargs)
-        self.url, self.ref = self.spec.split('/', 1)
-        self.repo = urllib.parse.unquote(self.url)
+        self.ref = str(uuid1())
+        self.repo = urllib.parse.unquote(self.spec.rstrip('/'))
         self.hostname = urllib.parse.urlparse(self.repo).netloc.split(':')[0]
 
     def get_optional_envs(self, access_token=None):
@@ -980,8 +981,7 @@ class RDMProvider(RepoProvider):
         return self.get_repo_url()
 
     def get_build_slug(self):
-        build_slug = '{}-{}'.format(self.hostname, urllib.parse.quote(self.ref))
-        return re.sub(r'[^\-\.A-Za-z0-9]', '-', build_slug)
+        return re.sub(r'[^\-\.A-Za-z0-9]', '-', self.repo)
 
     def _find_host(self, target_host):
         for host in self.hosts:

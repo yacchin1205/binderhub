@@ -101,7 +101,8 @@ function updateRepoText() {
   }
   else if (provider === "rdm") {
     text = "RDM URL";
-    tag_text = "RDM storage name and path";
+    $("#ref").prop("disabled", true);
+    $("label[for=ref]").prop("disabled", true);
   }
   $("#repository").attr('placeholder', text);
   $("label[for=repository]").text(text);

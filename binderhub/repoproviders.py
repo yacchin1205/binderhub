@@ -945,8 +945,13 @@ class RDMProvider(RepoProvider):
     def __init__(self, *args, **kwargs):
         # We dont need to initialize entirely the same as github
         super(RepoProvider, self).__init__(*args, **kwargs)
-        self.ref = str(uuid1())
-        self.repo = urllib.parse.unquote(self.spec.rstrip('/'))
+        if '/' not in self.spec:
+            url = self.spec
+            ref = None
+        else:
+            url, ref = self.spec.split('/', 1)
+        self.ref = str(uuid1()) if ref == 'master' or ref == '' or ref is None else ref
+        self.repo = urllib.parse.unquote(url)
         self.hostname = urllib.parse.urlparse(self.repo).netloc.split(':')[0]
 
     def get_optional_envs(self, access_token=None):

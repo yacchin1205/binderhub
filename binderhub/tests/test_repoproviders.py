@@ -8,7 +8,7 @@ from tornado.ioloop import IOLoop
 from binderhub.repoproviders import (
     tokenize_spec, strip_suffix, GitHubRepoProvider, GitRepoProvider,
     GitLabRepoProvider, GistRepoProvider, ZenodoProvider, FigshareProvider,
-    HydroshareProvider, DataverseProvider, RDMProvider
+    HydroshareProvider, DataverseProvider, RDMProvider, WEKO3Provider
 )
 
 
@@ -183,6 +183,47 @@ async def test_dataverse(spec, resolved_spec, resolved_ref, resolved_ref_url, bu
 ])
 async def test_rdm(spec, resolved_ref, repo_url, build_slug):
     provider = RDMProvider(spec=spec)
+
+    # have to resolve the ref first
+    ref = await provider.get_resolved_ref()
+    if resolved_ref is not None:
+        assert ref == resolved_ref
+    else:
+        assert re.match(r'^[0-9A-Fa-f\-]+$', ref) is not None
+
+    slug = provider.get_build_slug()
+    assert slug == build_slug
+    assert provider.get_repo_url() == repo_url
+    ref_url = await provider.get_resolved_ref_url()
+    assert ref_url == repo_url
+    resolved_spec = await provider.get_resolved_spec()
+    assert spec == resolved_spec
+
+
+@pytest.mark.parametrize('spec,resolved_ref,repo_url,build_slug', [
+    ['https%3A%2F%2Fsome.host.test.jp%2Fpwad2/',
+     None,
+     'https://some.host.test.jp/pwad2',
+     'https---some.host.test.jp-pwad2'],
+    ['https%3A%2F%2Fsome.host.test.jp%2Fpwad2',
+     None,
+     'https://some.host.test.jp/pwad2',
+     'https---some.host.test.jp-pwad2'],
+    ['https%3A%2F%2Fsome.host.test.jp%2Fpwad2%2Ffiles%2Ftestprovider%2Ftestdir/',
+     None,
+     'https://some.host.test.jp/pwad2/files/testprovider/testdir',
+     'https---some.host.test.jp-pwad2-files-testprovider-testdir'],
+    ['https%3A%2F%2Fsome.host.test.jp%2Fpwad2%2Ffiles%2Ftestprovider%2Ftestdir/master',
+     None,
+     'https://some.host.test.jp/pwad2/files/testprovider/testdir',
+     'https---some.host.test.jp-pwad2-files-testprovider-testdir'],
+    ['https%3A%2F%2Fsome.host.test.jp%2Fpwad2%2Ffiles%2Ftestprovider%2Ftestdir/X1234',
+     'X1234',
+     'https://some.host.test.jp/pwad2/files/testprovider/testdir',
+     'https---some.host.test.jp-pwad2-files-testprovider-testdir'],
+])
+async def test_weko3(spec, resolved_ref, repo_url, build_slug):
+    provider = WEKO3Provider(spec=spec)
 
     # have to resolve the ref first
     ref = await provider.get_resolved_ref()

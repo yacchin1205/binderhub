@@ -36,7 +36,7 @@ from .main import MainHandler, ParameterizedMainHandler, LegacyRedirectHandler
 from .repoproviders import (GitHubRepoProvider, GitRepoProvider,
                             GitLabRepoProvider, GistRepoProvider,
                             ZenodoProvider, FigshareProvider, HydroshareProvider,
-                            DataverseProvider, RDMProvider)
+                            DataverseProvider, RDMProvider, WEKO3Provider)
 from .metrics import MetricsHandler
 
 from .utils import ByteSpecification, url_path_join
@@ -433,6 +433,7 @@ class BinderHub(Application):
             'hydroshare': HydroshareProvider,
             'dataverse': DataverseProvider,
             'rdm': RDMProvider,
+            'weko3': WEKO3Provider,
         },
         config=True,
         help="""

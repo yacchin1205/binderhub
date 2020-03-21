@@ -104,6 +104,11 @@ function updateRepoText() {
     $("#ref").prop("disabled", true);
     $("label[for=ref]").prop("disabled", true);
   }
+  else if (provider === "weko3") {
+    text = "WEKO3 URL";
+    $("#ref").prop("disabled", true);
+    $("label[for=ref]").prop("disabled", true);
+  }
   $("#repository").attr('placeholder', text);
   $("label[for=repository]").text(text);
   $("#ref").attr('placeholder', tag_text);

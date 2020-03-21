@@ -15,7 +15,8 @@
                 "Figshare",
                 "Hydroshare",
                 "Dataverse",
-                "RDM"
+                "RDM",
+                "WEKO3",
             ],
             "description": "Provider for the repository being launched"
         },

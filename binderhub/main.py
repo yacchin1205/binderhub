@@ -20,6 +20,7 @@ SPEC_NAMES = {
     "hydroshare": "Hydroshare",
     "dataverse": "Dataverse",
     "rdm": "RDM",
+    "weko3": "WEKO3",
 }
 
 

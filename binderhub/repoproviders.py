@@ -994,3 +994,71 @@ class RDMProvider(RepoProvider):
                     for h in host['hostname']]):
                 return host
         raise ValueError('Host not found: {}'.format(target_host))
+
+
+class WEKO3Provider(RepoProvider):
+    """WEKO3 provider
+    """
+
+    name = Unicode('WEKO3')
+
+    hosts = List(config=True,
+        help="""WEKO3 hosts
+        Loaded from WEKO3_HOSTS_JSON env by default."""
+    )
+    @default('hosts')
+    def _private_token_default(self):
+        return json.loads(os.getenv('WEKO3_HOSTS_JSON', '[]'))
+
+    def __init__(self, *args, **kwargs):
+        # We dont need to initialize entirely the same as github
+        super(RepoProvider, self).__init__(*args, **kwargs)
+        if '/' not in self.spec:
+            url = self.spec
+            ref = None
+        else:
+            url, ref = self.spec.split('/', 1)
+        self.ref = str(uuid1()) if ref == 'master' or ref == '' or ref is None else ref
+        self.repo = urllib.parse.unquote(url)
+        self.hostname = urllib.parse.urlparse(self.repo).netloc.split(':')[0]
+
+    def get_optional_envs(self, access_token=None):
+        hosts = deepcopy(self.hosts)
+        for host in hosts:
+            if any([urllib.parse.urlparse(h).netloc.split(':')[0] == self.hostname
+                    for h in host['hostname']]):
+                host['token'] = access_token
+        return {'WEKO3_HOSTS_JSON': json.dumps(hosts)}
+
+    def get_authorization_provider(self):
+        return self.hostname
+
+    def get_authorization_url(self, state, hub_url):
+        client = OAuth2Client(self._find_host(self.hostname))
+        return client.get_authorization_url(state, hub_url)
+
+    def fetch_authorized_token(self, authorization_response, hub_url):
+        client = OAuth2Client(self._find_host(self.hostname))
+        return client.fetch_token(authorization_response, hub_url)
+
+    async def get_resolved_ref(self):
+        return self.ref
+
+    async def get_resolved_spec(self):
+        return self.spec
+
+    def get_repo_url(self):
+        return self.repo
+
+    async def get_resolved_ref_url(self):
+        return self.get_repo_url()
+
+    def get_build_slug(self):
+        return re.sub(r'[^\-\.A-Za-z0-9]', '-', self.repo)
+
+    def _find_host(self, target_host):
+        for host in self.hosts:
+            if any([urllib.parse.urlparse(h).netloc.split(':')[0] == target_host
+                    for h in host['hostname']]):
+                return host
+        raise ValueError('Host not found: {}'.format(target_host))

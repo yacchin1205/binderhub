@@ -171,3 +171,38 @@ def test_rdm_hosts_passed_to_podspec_upon_submit():
     }
 
     assert json.loads(env['RDM_HOSTS_JSON']) == rdm_hosts
+
+
+def test_weko3_hosts_passed_to_podspec_upon_submit():
+    weko3_hosts = [{
+        'hostname': ['https://test.jp'],
+        'file_base_url': 'https://test.jp/api/files',
+    }]
+    optional_envs = {'WEKO3_HOSTS_JSON': json.dumps(weko3_hosts)}
+    build = Build(
+        mock.MagicMock(), api=mock.MagicMock(), name='test_build',
+        namespace='build_namespace', repo_url=mock.MagicMock(), ref=mock.MagicMock(),
+        git_credentials=None,
+        optional_envs=optional_envs, build_image=mock.MagicMock(),
+        image_name=mock.MagicMock(), push_secret=mock.MagicMock(),
+        memory_limit=mock.MagicMock(), docker_host='http://mydockerregistry.local',
+        node_selector=mock.MagicMock())
+
+    with mock.patch.object(build, 'api') as api_patch, \
+            mock.patch.object(build.stop_event, 'is_set', return_value=True):
+        build.submit()
+
+    call_args_list = api_patch.create_namespaced_pod.call_args_list
+    assert len(call_args_list) == 1
+
+    args = call_args_list[0][0]
+    pod = args[1]
+
+    assert len(pod.spec.containers) == 1
+
+    env = {
+        env_var.name: env_var.value
+        for env_var in pod.spec.containers[0].env
+    }
+
+    assert json.loads(env['WEKO3_HOSTS_JSON']) == weko3_hosts

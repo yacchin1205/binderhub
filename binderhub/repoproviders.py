@@ -992,7 +992,9 @@ class RDMProvider(RepoProvider):
         for host in self.hosts:
             if any([urllib.parse.urlparse(h).netloc.split(':')[0] == target_host
                     for h in host['hostname']]):
-                return host
+                r = host.copy()
+                r['scope'] = ['osf.full_read']
+                return r
         raise ValueError('Host not found: {}'.format(target_host))
 
 
@@ -1060,5 +1062,7 @@ class WEKO3Provider(RepoProvider):
         for host in self.hosts:
             if any([urllib.parse.urlparse(h).netloc.split(':')[0] == target_host
                     for h in host['hostname']]):
-                return host
+                r = host.copy()
+                r['scope'] = ['deposit:actions', 'deposit:write', 'user:email']
+                return r
         raise ValueError('Host not found: {}'.format(target_host))

@@ -107,7 +107,7 @@ class OAuth2Client(object):
         redirect_uri = url_path_join(binderhub_url, '/repoauth/callback')
         return OAuth2Session(self.host['client_id'],
                              redirect_uri=redirect_uri,
-                             scope=['osf.full_read'])
+                             scope=self.host['scope'])
 
 
 class RepoAuthCallbackHandler(BaseHandler):

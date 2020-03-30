@@ -17,6 +17,14 @@ from .utils import async_requests
          "/v2/rdm/https%3A%2F%2Ftest.somerdm.com%2Fx1234%2Ffiles%2Fosfstorage%2Ftest/master"),
         ("/rdm/test.somerdm.com/x1234/osfstorage/test/",
          "/v2/rdm/https%3A%2F%2Ftest.somerdm.com%2Fx1234%2Ffiles%2Fosfstorage%2Ftest/master"),
+        ("/rdm/test.somerdm.com/rcosrepo/import/x1234", "/v2/rdm/https%3A%2F%2Ftest.somerdm.com%2Fx1234/master"),
+        ("/rdm/test.somerdm.com/rcosrepo/import/x1234/", "/v2/rdm/https%3A%2F%2Ftest.somerdm.com%2Fx1234/master"),
+        ("/rdm/test.somerdm.com/rcosrepo/import/x1234/osfstorage",
+         "/v2/rdm/https%3A%2F%2Ftest.somerdm.com%2Fx1234%2Ffiles%2Fosfstorage/master"),
+        ("/rdm/test.somerdm.com/rcosrepo/import/x1234/osfstorage/test",
+         "/v2/rdm/https%3A%2F%2Ftest.somerdm.com%2Fx1234%2Ffiles%2Fosfstorage%2Ftest/master"),
+        ("/rdm/test.somerdm.com/rcosrepo/import/x1234/osfstorage/test/",
+         "/v2/rdm/https%3A%2F%2Ftest.somerdm.com%2Fx1234%2Ffiles%2Fosfstorage%2Ftest/master"),
     ]
 )
 async def test_rdm_redirect(app, old_url, new_url):

@@ -658,6 +658,7 @@ class BinderHub(Application):
             (r"/build/([^/]+)/(.+)", BuildHandler, {'binderhub_url': self.binderhub_url}),
             (r"/v2/([^/]+)/(.+)", ParameterizedMainHandler),
             (r"/repo/([^/]+)/([^/]+)(/.*)?", LegacyRedirectHandler),
+            (r"/rdm/([^/]+)/rcosrepo/import/([^/]+)(/.*)?", RDMRedirectHandler),
             (r"/rdm/([^/]+)/([^/]+)(/.*)?", RDMRedirectHandler),
             (r"/weko3/([^/]+)/([^/]+)(/.+)", WEKO3RedirectHandler),
             # for backward-compatible mybinder.org badge URLs

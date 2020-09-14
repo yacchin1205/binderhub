@@ -57,6 +57,7 @@ class Build:
         appendix="",
         log_tail_lines=100,
         sticky_builds=False,
+        optional_envs=None,
     ):
         self.q = q
         self.api = api

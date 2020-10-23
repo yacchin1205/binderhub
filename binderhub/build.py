@@ -57,6 +57,7 @@ class Build:
         appendix="",
         log_tail_lines=100,
         sticky_builds=False,
+        optional_envs=None,
     ):
         self.q = q
         self.api = api
@@ -77,6 +78,7 @@ class Build:
 
         self.stop_event = threading.Event()
         self.git_credentials = git_credentials
+        self.optional_envs = optional_envs
 
         self.sticky_builds = sticky_builds
 
@@ -254,6 +256,9 @@ class Build:
         env = []
         if self.git_credentials:
             env.append(client.V1EnvVar(name='GIT_CREDENTIAL_ENV', value=self.git_credentials))
+        if self.optional_envs is not None:
+            for ek, ev in self.optional_envs.items():
+                env.append(client.V1EnvVar(name=ek, value=ev))
 
         self.pod = client.V1Pod(
             metadata=client.V1ObjectMeta(

@@ -413,9 +413,6 @@ class BinderHub(Application):
         if proposal.value is not None and not proposal.value.endswith('/'):
             return proposal.value + '/'
         return proposal.value
-    @default('hub_internal_url')
-    def _default_hub_internal_url(self):
-        return self.hub_url
 
     build_namespace = Unicode(
         'default',
@@ -617,7 +614,7 @@ class BinderHub(Application):
         self.launcher = Launcher(
             parent=self,
             hub_url=self.hub_url,
-            hub_internal_url=self.hub_internal_url,
+            hub_internal_url=self.hub_internal_url or self.hub_url,
             hub_api_token=self.hub_api_token,
             create_user=not self.auth_enabled,
         )
@@ -714,7 +711,7 @@ class BinderHub(Application):
                 tornado.web.StaticFileHandler,
                 {'path': os.path.join(self.tornado_settings['static_path'], 'images')}),
             (r'/about', AboutHandler),
-            (r'/health', HealthHandler, {'hub_url': self.hub_internal_url}),
+            (r'/health', HealthHandler, {'hub_url': self.hub_internal_url or self.hub_url}),
             (r'/repoauth/callback', RepoAuthCallbackHandler, {'binderhub_url': self.binderhub_url}),
             (r'/', MainHandler),
             (r'.*', Custom404),

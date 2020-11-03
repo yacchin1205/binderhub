@@ -83,6 +83,7 @@ class Launcher(LoggingConfigurable):
         headers = kwargs.setdefault('headers', {})
         headers.update({'Authorization': 'token %s' % self.hub_api_token})
         hub_api_url = os.getenv('JUPYTERHUB_API_URL', '') or self.hub_internal_url + 'hub/api/'
+        print('HubAPIURL', hub_api_url, self.hub_url, self.hub_internal_url)
         request_url = hub_api_url + url
         req = HTTPRequest(request_url, *args, **kwargs)
         retry_delay = self.retry_delay

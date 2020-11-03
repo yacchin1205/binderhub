@@ -408,7 +408,7 @@ class BinderHub(Application):
             return proposal.value + '/'
         return proposal.value
     @validate('hub_internal_url')
-    def _add_slash(self, proposal):
+    def _add_slash_to_hub_internal_url(self, proposal):
         """trait validator to ensure hub_url ends with a trailing slash"""
         if proposal.value is not None and not proposal.value.endswith('/'):
             return proposal.value + '/'

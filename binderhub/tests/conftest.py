@@ -125,7 +125,7 @@ def _binderhub_config():
             pytest.fail("JupyterHub should be available on Travis")
         cfg.BinderHub.hub_url = ''
     else:
-        print(f"JupyterHub available at {cfg.BinderHub.hub_url}")
+        print(f"JupyterHub available at {cfg.BinderHub.hub_url} {cfg.BinderHub.hub_internal_url} {cfg.HubOAuth.api_url}")
     return cfg
 
 

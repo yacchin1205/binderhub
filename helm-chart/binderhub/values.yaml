@@ -33,6 +33,7 @@ service:
   annotations:
     prometheus.io/scrape: 'true'
   nodePort:
+  loadBalancerSourceRanges: []
 
 config:
   BinderHub: {}

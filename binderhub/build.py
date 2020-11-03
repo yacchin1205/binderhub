@@ -36,9 +36,29 @@ class Build:
         API instead of having to invent our own locking code.
 
     """
-    def __init__(self, q, api, name, namespace, repo_url, ref, git_credentials, build_image,
-                 image_name, push_secret, memory_limit, docker_host, node_selector,
-                 appendix='', log_tail_lines=100, sticky_builds=False):
+
+    def __init__(
+        self,
+        q,
+        api,
+        name,
+        *,
+        namespace,
+        repo_url,
+        ref,
+        build_image,
+        docker_host,
+        image_name,
+        git_credentials=None,
+        push_secret=None,
+        memory_limit=0,
+        memory_request=0,
+        node_selector=None,
+        appendix="",
+        log_tail_lines=100,
+        sticky_builds=False,
+        optional_envs=None,
+    ):
         self.q = q
         self.api = api
         self.repo_url = repo_url
@@ -50,6 +70,7 @@ class Build:
         self.build_image = build_image
         self.main_loop = IOLoop.current()
         self.memory_limit = memory_limit
+        self.memory_request = memory_request
         self.docker_host = docker_host
         self.node_selector = node_selector
         self.appendix = appendix
@@ -57,6 +78,7 @@ class Build:
 
         self.stop_event = threading.Event()
         self.git_credentials = git_credentials
+        self.optional_envs = optional_envs
 
         self.sticky_builds = sticky_builds
 
@@ -234,6 +256,9 @@ class Build:
         env = []
         if self.git_credentials:
             env.append(client.V1EnvVar(name='GIT_CREDENTIAL_ENV', value=self.git_credentials))
+        if self.optional_envs is not None:
+            for ek, ev in self.optional_envs.items():
+                env.append(client.V1EnvVar(name=ek, value=ev))
 
         self.pod = client.V1Pod(
             metadata=client.V1ObjectMeta(
@@ -255,7 +280,7 @@ class Build:
                         volume_mounts=volume_mounts,
                         resources=client.V1ResourceRequirements(
                             limits={'memory': self.memory_limit},
-                            requests={'memory': self.memory_limit}
+                            requests={'memory': self.memory_request},
                         ),
                         env=env
                     )

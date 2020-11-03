@@ -34,6 +34,7 @@ class Launcher(LoggingConfigurable):
 
     hub_api_token = Unicode(help="The API token for the Hub")
     hub_url = Unicode(help="The URL of the Hub")
+    hub_internal_url = Unicode(help="The URL of the Hub (Internal use)")
     create_user = Bool(True, help="Create a new Hub user")
     allow_named_servers = Bool(
         os.getenv('JUPYTERHUB_ALLOW_NAMED_SERVERS', "false") == "true",
@@ -69,10 +70,10 @@ class Launcher(LoggingConfigurable):
         config=True,
         allow_none=True,
         help="""
-        An optional hook function that you can use to implement checks before starting a user's server. 
-        For example if you have a non-standard BinderHub deployment, 
+        An optional hook function that you can use to implement checks before starting a user's server.
+        For example if you have a non-standard BinderHub deployment,
         in this hook you can check if the current user has right to launch a new repo.
-        
+
         Receives 5 parameters: launcher, image, username, server_name, repo_url
         """
     )
@@ -81,7 +82,8 @@ class Launcher(LoggingConfigurable):
         """Make an API request to JupyterHub"""
         headers = kwargs.setdefault('headers', {})
         headers.update({'Authorization': 'token %s' % self.hub_api_token})
-        hub_api_url = os.getenv('JUPYTERHUB_API_URL', '') or self.hub_url + 'hub/api/'
+        hub_api_url = os.getenv('JUPYTERHUB_API_URL', '') or self.hub_internal_url + 'hub/api/'
+        print('HubAPIURL', hub_api_url, self.hub_url, self.hub_internal_url)
         request_url = hub_api_url + url
         req = HTTPRequest(request_url, *args, **kwargs)
         retry_delay = self.retry_delay

@@ -95,7 +95,7 @@ spec:
               key: "binder.hub-token"
         {{- if .Values.config.BinderHub.auth_enabled }}
         - name: JUPYTERHUB_API_URL
-          value: {{ (print (.Values.config.BinderHub.hub_url | trimSuffix "/") "/hub/api/") }}
+          value: {{ (print (.Values.config.BinderHub.hub_internal_url | trimSuffix "/") "/hub/api/") }}
         - name: JUPYTERHUB_BASE_URL
           value: {{ .Values.jupyterhub.hub.baseUrl | quote }}
         - name: JUPYTERHUB_CLIENT_ID
@@ -117,8 +117,15 @@ spec:
             name: binder
         livenessProbe:
           httpGet:
-            path: {{ default "/" .Values.config.BinderHub.base_url }}about
+            path: {{ default "/" .Values.config.BinderHub.base_url }}versions
             port: binder
           initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: {{ default "/" .Values.config.BinderHub.base_url }}about
+            port: binder
+          initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 10

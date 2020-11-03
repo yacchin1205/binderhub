@@ -612,6 +612,7 @@ class BinderHub(Application):
         self.launcher = Launcher(
             parent=self,
             hub_url=self.hub_url,
+            hub_internal_url=self.hub_internal_url,
             hub_api_token=self.hub_api_token,
             create_user=not self.auth_enabled,
         )

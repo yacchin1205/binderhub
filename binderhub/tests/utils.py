@@ -45,6 +45,9 @@ class MockAsyncHTTPClient(CurlAsyncHTTPClient):
         if urlparse(url_key).hostname in ('127.0.0.1', 'localhost'):
             # don't record localhost requests
             return
+        if response is None:
+            print('Response empty')
+            return
         self.records[url_key] = {
             'code': response.code,
             'headers': dict(response.headers),

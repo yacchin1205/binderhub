@@ -99,6 +99,16 @@ function updateRepoText() {
     $("#ref").prop("disabled", true);
     $("label[for=ref]").prop("disabled", true);
   }
+  else if (provider === "rdm") {
+    text = "RDM URL";
+    $("#ref").prop("disabled", true);
+    $("label[for=ref]").prop("disabled", true);
+  }
+  else if (provider === "weko3") {
+    text = "WEKO3 URL";
+    $("#ref").prop("disabled", true);
+    $("label[for=ref]").prop("disabled", true);
+  }
   $("#repository").attr('placeholder', text);
   $("label[for=repository]").text(text);
   $("#ref").attr('placeholder', tag_text);
@@ -224,6 +234,11 @@ function build(providerSpec, log, path, pathType) {
     image.close();
     // user server is ready, redirect to there
     image.launch(data.url, data.token, path, pathType);
+  });
+
+  image.onStateChange('auth', function(oldState, newState, data) {
+    // Authorization required for repository access
+    window.location.href = data.authorization_url;
   });
 
   image.fetch();

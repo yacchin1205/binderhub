@@ -22,6 +22,8 @@ from prometheus_client import Counter, Histogram, Gauge
 
 from .base import BaseHandler
 from .build import Build, FakeBuild
+from .repoauth import TokenStore
+from .utils import url_path_join
 
 # Separate buckets for builds and launches.
 # Builds and launches have very different characteristic times,
@@ -173,12 +175,14 @@ class BuildHandler(BaseHandler):
         self.write('data: {}\n\n'.format(evt))
         self.finish()
 
-    def initialize(self):
+    def initialize(self, binderhub_url=None):
         super().initialize()
         if self.settings['use_registry']:
             self.registry = self.settings['registry']
 
         self.event_log = self.settings['event_log']
+        self.binderhub_url = binderhub_url
+        self.tokenstore = TokenStore(self.settings['repo_token_store'])
 
     async def fail(self, message):
         await self.emit({
@@ -236,6 +240,24 @@ class BuildHandler(BaseHandler):
                 'message': 'Sorry, {} has been temporarily disabled from launching. Please contact admins for more info!'.format(spec)
             })
             return
+
+        auth_token = None
+        auth_provider_id = provider.get_authorization_provider()
+        if auth_provider_id is not None and self.settings['auth_enabled']:
+            # Need authorization
+            user = self.get_current_user()
+            auth_token = self.tokenstore.get_access_token_for(user,
+                                                              provider_prefix,
+                                                              auth_provider_id)
+            if auth_token is None:
+                state = self.tokenstore.new_session(spec, user, provider_prefix, auth_provider_id)
+                auth_url = provider.get_authorization_url(state, self.binderhub_url)
+                await self.emit({
+                    'phase': 'auth',
+                    'message': 'Authorization required...\n',
+                    'authorization_url': auth_url,
+                })
+                return
 
         repo_url = self.repo_url = provider.get_repo_url()
 
@@ -363,6 +385,7 @@ class BuildHandler(BaseHandler):
             appendix=appendix,
             log_tail_lines=self.settings['log_tail_lines'],
             git_credentials=provider.git_credentials,
+            optional_envs=provider.get_optional_envs(access_token=auth_token),
             sticky_builds=self.settings['sticky_builds'],
         )
 

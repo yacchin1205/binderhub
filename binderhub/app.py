@@ -8,6 +8,7 @@ import logging
 import os
 import re
 from glob import glob
+import tempfile
 from urllib.parse import urlparse
 
 import kubernetes.client
@@ -36,11 +37,14 @@ from .main import MainHandler, ParameterizedMainHandler, LegacyRedirectHandler
 from .repoproviders import (GitHubRepoProvider, GitRepoProvider,
                             GitLabRepoProvider, GistRepoProvider,
                             ZenodoProvider, FigshareProvider, HydroshareProvider,
-                            DataverseProvider)
+                            DataverseProvider, RDMProvider, WEKO3Provider)
+from .rdm import RDMRedirectHandler, WEKO3RedirectHandler
 from .metrics import MetricsHandler
 
 from .utils import ByteSpecification, url_path_join
 from .events import EventLog
+
+from .repoauth import RepoAuthCallbackHandler
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -370,6 +374,15 @@ class BinderHub(Application):
     def _default_hub_token(self):
         return os.environ.get('JUPYTERHUB_API_TOKEN', '')
 
+    binderhub_url = Unicode(
+        help="""
+        The base URL of the BinderHub instance.
+
+        e.g. https://mybinder.org/
+        """,
+        config=True,
+    )
+
     hub_url = Unicode(
         help="""
         The base URL of the JupyterHub instance where users will run.
@@ -378,8 +391,24 @@ class BinderHub(Application):
         """,
         config=True,
     )
+
+    hub_internal_url = Unicode(
+        help="""
+        The base URL of the JupyterHub instance where users will run.
+        (Internal use)
+
+        e.g. http://hub:8081/
+        """,
+        config=True,
+    )
     @validate('hub_url')
     def _add_slash(self, proposal):
+        """trait validator to ensure hub_url ends with a trailing slash"""
+        if proposal.value is not None and not proposal.value.endswith('/'):
+            return proposal.value + '/'
+        return proposal.value
+    @validate('hub_internal_url')
+    def _add_slash_to_hub_internal_url(self, proposal):
         """trait validator to ensure hub_url ends with a trailing slash"""
         if proposal.value is not None and not proposal.value.endswith('/'):
             return proposal.value + '/'
@@ -421,6 +450,8 @@ class BinderHub(Application):
             'figshare': FigshareProvider,
             'hydroshare': HydroshareProvider,
             'dataverse': DataverseProvider,
+            'rdm': RDMProvider,
+            'weko3': WEKO3Provider,
         },
         config=True,
         help="""
@@ -508,6 +539,12 @@ class BinderHub(Application):
         help='Origin to use when emitting events. Defaults to hostname of request when empty'
     )
 
+    repo_token_store = Unicode(
+        '',
+        config=True,
+        help='SQLite file to store tokens for repoproviders'
+    )
+
     @staticmethod
     def add_url_prefix(prefix, handlers):
         """add a url prefix to handlers"""
@@ -577,6 +614,7 @@ class BinderHub(Application):
         self.launcher = Launcher(
             parent=self,
             hub_url=self.hub_url,
+            hub_internal_url=self.hub_internal_url or self.hub_url,
             hub_api_token=self.hub_api_token,
             create_user=not self.auth_enabled,
         )
@@ -586,6 +624,10 @@ class BinderHub(Application):
         for schema_file in glob(os.path.join(HERE, 'event-schemas','*.json')):
             with open(schema_file) as f:
                 self.event_log.register_schema(json.load(f))
+
+        repo_token_store = self.repo_token_store
+        if len(repo_token_store) == 0:
+            repo_token_store = os.path.join(tempfile.mkdtemp(), 'tokenstore.db')
 
         self.tornado_settings.update(
             {
@@ -626,6 +668,7 @@ class BinderHub(Application):
                 "auth_enabled": self.auth_enabled,
                 "event_log": self.event_log,
                 "normalized_origin": self.normalized_origin,
+                "repo_token_store": repo_token_store,
             }
         )
         if self.auth_enabled:
@@ -634,9 +677,12 @@ class BinderHub(Application):
         handlers = [
             (r'/metrics', MetricsHandler),
             (r'/versions', VersionHandler),
-            (r"/build/([^/]+)/(.+)", BuildHandler),
+            (r"/build/([^/]+)/(.+)", BuildHandler, {'binderhub_url': self.binderhub_url}),
             (r"/v2/([^/]+)/(.+)", ParameterizedMainHandler),
             (r"/repo/([^/]+)/([^/]+)(/.*)?", LegacyRedirectHandler),
+            (r"/rdm/([^/]+)/rcosrepo/import/([^/]+)(/.*)?", RDMRedirectHandler),
+            (r"/rdm/([^/]+)/([^/]+)(/.*)?", RDMRedirectHandler),
+            (r"/weko3/([^/]+)/([^/]+)(/.+)", WEKO3RedirectHandler),
             # for backward-compatible mybinder.org badge URLs
             # /assets/images/badge.svg
             (r'/assets/(images/badge\.svg)',
@@ -665,7 +711,8 @@ class BinderHub(Application):
                 tornado.web.StaticFileHandler,
                 {'path': os.path.join(self.tornado_settings['static_path'], 'images')}),
             (r'/about', AboutHandler),
-            (r'/health', HealthHandler, {'hub_url': self.hub_url}),
+            (r'/health', HealthHandler, {'hub_url': self.hub_internal_url or self.hub_url}),
+            (r'/repoauth/callback', RepoAuthCallbackHandler, {'binderhub_url': self.binderhub_url}),
             (r'/', MainHandler),
             (r'.*', Custom404),
         ]

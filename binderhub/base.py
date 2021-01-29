@@ -18,6 +18,11 @@ class BaseHandler(HubOAuthenticated, web.RequestHandler):
             self.hub_auth = HubOAuth.instance(config=self.settings['traitlets_config'])
 
     def get_current_user(self):
+        token_provider = self.settings.get('oauth2_token_provider', None)
+        if token_provider is not None:
+            user = token_provider.get_user_token(self)
+            if user is not None:
+                return user
         if not self.settings['auth_enabled']:
             return 'anonymous'
         return super().get_current_user()

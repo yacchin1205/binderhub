@@ -21,7 +21,7 @@ import tornado.options
 import tornado.log
 from tornado.log import app_log
 import tornado.web
-from traitlets import Unicode, Integer, Bool, Dict, validate, TraitError, Union, default
+from traitlets import Unicode, Integer, Bool, Dict, List, validate, TraitError, Union, default
 from traitlets.config import Application
 from jupyterhub.services.auth import HubOAuthCallbackHandler
 from jupyterhub.traitlets import Callable
@@ -45,6 +45,9 @@ from .utils import ByteSpecification, url_path_join
 from .events import EventLog
 
 from .repoauth import RepoAuthCallbackHandler
+from .auth import (default_handlers as auth_handlers,
+                   make_provider as auth_make_provider,
+                   orm as auth_orm)
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -184,6 +187,32 @@ class BinderHub(Application):
         help="""If JupyterHub authentication enabled,
         require user to login (don't create temporary users during launch) and
         start the new server for the logged in user.""",
+        config=True)
+
+    oauth2_provider_enabled = Bool(
+        False,
+        help="""
+        Whether OAuth2 provider is enabled.
+        """,
+        config=True)
+
+    oauth_clients = List(
+        [],
+        help="""
+        Definition of OAuth2 Client.
+
+        e.g. {'id': 'AAAA',
+              'secret': 'BBBB',
+              'redirect_uri': 'https://host/callback',
+              'description': 'Some Client'}
+        """,
+        config=True)
+
+    oauth_no_confirm_list = List(
+        [],
+        help="""
+        List of OAuth client id which requires no confirmation.
+        """,
         config=True)
 
     port = Integer(
@@ -726,6 +755,17 @@ class BinderHub(Application):
                                  url_path_join(self.base_url, 'oauth_callback')
             oauth_redirect_uri = urlparse(oauth_redirect_uri).path
             handlers.insert(-1, (re.escape(oauth_redirect_uri), HubOAuthCallbackHandler))
+        if self.oauth2_provider_enabled:
+            self.log.debug('Enables OAuth2 Provider')
+            self.tornado_settings['oauth_no_confirm_list'] = self.oauth_no_confirm_list
+            session_factory = auth_orm.new_session_factory()
+            oauth_provider, token_provider = auth_make_provider(session_factory)
+            self.tornado_settings['oauth2_token_provider'] = token_provider
+            for oauth_client in self.oauth_clients:
+                oauth_provider.add_client(**oauth_client)
+            for path, handler in auth_handlers:
+                handlers.insert(-1, (re.escape(url_path_join(self.base_url, path)),
+                                     handler, {'oauth_provider': oauth_provider}))
         self.tornado_app = tornado.web.Application(handlers, **self.tornado_settings)
 
     def stop(self):

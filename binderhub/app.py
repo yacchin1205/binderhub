@@ -196,6 +196,11 @@ class BinderHub(Application):
         """,
         config=True)
 
+    oauth_db_url = Unicode(
+        'sqlite:///binderhub-oauth.sqlite',
+        help="url for the database. e.g. `sqlite:///binderhub-oauth.sqlite`",
+    ).tag(config=True)
+
     oauth_clients = List(
         [],
         help="""
@@ -758,14 +763,17 @@ class BinderHub(Application):
         if self.oauth2_provider_enabled:
             self.log.debug('Enables OAuth2 Provider')
             self.tornado_settings['oauth_no_confirm_list'] = self.oauth_no_confirm_list
-            session_factory = auth_orm.new_session_factory()
+            session_factory = auth_orm.new_session_factory(self.oauth_db_url)
             oauth_provider, token_provider = auth_make_provider(session_factory)
             self.tornado_settings['oauth2_token_provider'] = token_provider
             for oauth_client in self.oauth_clients:
                 oauth_provider.add_client(**oauth_client)
             for path, handler in auth_handlers:
                 handlers.insert(-1, (re.escape(url_path_join(self.base_url, path)),
-                                     handler, {'oauth_provider': oauth_provider}))
+                                     handler, {
+                                       'oauth_provider': oauth_provider,
+                                       'hub_url': self.hub_internal_url or self.hub_url
+                                     }))
         self.tornado_app = tornado.web.Application(handlers, **self.tornado_settings)
 
     def stop(self):

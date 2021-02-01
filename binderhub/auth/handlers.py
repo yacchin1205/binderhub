@@ -1,6 +1,7 @@
 # Copy from https://github.com/jupyterhub/jupyterhub/blob/master/jupyterhub/apihandlers/auth.py
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+import json
 import uuid
 
 from ..base import BaseHandler
@@ -13,9 +14,10 @@ SESSION_COOKIE_NAME = 'binderhub-session-id'
 
 
 class OAuthHandler(BaseHandler):
-    def initialize(self, oauth_provider):
+    def initialize(self, oauth_provider, hub_url):
         super().initialize()
         self.oauth_provider = oauth_provider
+        self.hub_url = hub_url
 
     def extract_oauth_params(self):
         """extract oauthlib params from a request
@@ -253,7 +255,25 @@ class OAuthTokenHandler(OAuthHandler):
             self.send_oauth_response(headers, body, status)
 
 
+class ServiceListHandler(BaseHandler):
+    def initialize(self, oauth_provider, hub_url):
+        super().initialize()
+        self.oauth_provider = oauth_provider
+        self.hub_url = hub_url
+
+    @web.authenticated
+    def get(self):
+        self.set_header("Content-type", "application/json")
+        self.write(json.dumps([
+            {
+                "name": "JupyterHub",
+                "hub_url": self.hub_url,
+            }
+        ]))
+
+
 default_handlers = [
     (r"/api/oauth2/authorize", OAuthAuthorizeHandler),
     (r"/api/oauth2/token", OAuthTokenHandler),
+    (r"/api/services", ServiceListHandler),
 ]

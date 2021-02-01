@@ -11,4 +11,5 @@ jupyterhub
 jsonschema
 pycurl
 tornado>=5.1
-
+oauthlib>=3.0
+SQLAlchemy>=1.1

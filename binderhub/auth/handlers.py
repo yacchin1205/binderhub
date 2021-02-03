@@ -266,8 +266,8 @@ class ServiceListHandler(BaseHandler):
         self.set_header("Content-type", "application/json")
         self.write(json.dumps([
             {
-                "name": "JupyterHub",
-                "hub_url": self.hub_url,
+                "type": "jupyterhub",
+                "url": self.hub_url,
             }
         ]))
 

@@ -13,9 +13,10 @@ class BinderHubTokenProvider:
             return None
         orm_token = orm.OAuthAccessToken.find(self.db, token)
         if orm_token is None:
+            app_log.warning('No token for %s', token)
             return None
-        app_log.debug('Found token for %s', orm_token.user_id)
-        return orm_token.user_id
+        app_log.debug('Found token for %s', orm_token.user_name)
+        return orm_token.user
 
     def _get_token(self, handler):
         token = handler.get_argument('token', None)

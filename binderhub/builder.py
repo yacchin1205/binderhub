@@ -532,6 +532,8 @@ class BuildHandler(BaseHandler):
             if self.settings['auth_enabled']:
                 # get logged in user's name
                 user_model = self.hub_auth.get_user(self)
+                if user_model is None:
+                    user_model = self.get_current_user()
                 username = user_model['name']
                 if launcher.allow_named_servers:
                     # user can launch multiple servers, so create a unique server name

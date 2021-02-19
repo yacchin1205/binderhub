@@ -1,6 +1,7 @@
 """Base classes for request handlers"""
 
 import json
+from urllib.parse import urlparse
 
 from http.client import responses
 from tornado import web
@@ -38,6 +39,22 @@ class BaseHandler(HubOAuthenticated, web.RequestHandler):
         for header, value in headers.items():
             self.set_header(header, value)
         self.set_header("access-control-allow-headers", "cache-control")
+        if self._is_allowed_request():
+            self.set_header(
+                'Access-Control-Allow-Origin', self.request.headers['Origin']
+            )
+
+    def _is_allowed_request(self):
+        allowed_hosts = self.settings.get('allowed_hosts', [])
+        if allowed_hosts is None or len(allowed_hosts) == 0:
+            return False
+        origin = self.request.headers.get('Origin', None)
+        if origin is None:
+            return False
+        domain = urlparse(origin).netloc
+        if ':' in domain:
+            domain = domain.split(':')[0]
+        return domain in allowed_hosts
 
     def get_spec_from_request(self, prefix):
         """Re-extract spec from request.path.

@@ -542,6 +542,14 @@ class BinderHub(Application):
         """
     )
 
+    allowed_hosts = List(
+        Unicode(),
+        help="""List of allowed hosts.
+
+        If this config is set, JupyterHub will send 'Access-Control-Allow-Origin' for requests by the allowed host.
+        """,
+    ).tag(config=True)
+
     template_variables = Dict(
         config=True,
         help="Extra variables to supply to jinja templates when rendering.",
@@ -689,6 +697,7 @@ class BinderHub(Application):
                 "about_message": self.about_message,
                 "banner_message": self.banner_message,
                 "extra_footer_scripts": self.extra_footer_scripts,
+                "allowed_hosts": self.allowed_hosts,
                 "jinja2_env": jinja_env,
                 "build_memory_limit": self.build_memory_limit,
                 "build_memory_request": self.build_memory_request,

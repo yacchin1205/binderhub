@@ -54,6 +54,10 @@ Base = declarative_base()
 Base.log = app_log
 
 
+def get_user(user_name):
+    return dict(kind='user', name=user_name)
+
+
 class OAuthAccessToken(Hashed, Base):
     __tablename__ = 'oauth_access_tokens'
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -71,7 +75,7 @@ class OAuthAccessToken(Hashed, Base):
     expires_at = Column(Integer)
     refresh_token = Column(Unicode(255))
     refresh_expires_at = Column(Integer)
-    user_id = Column(Unicode(1024))
+    user_name = Column(Unicode(1024))
 
     # the browser session id associated with a given token
     session_id = Column(Unicode(255))
@@ -84,10 +88,10 @@ class OAuthAccessToken(Hashed, Base):
     last_activity = Column(DateTime, nullable=True)
 
     def __repr__(self):
-        return "<{cls}('{prefix}...', client_id={client_id!r}, user_id={user_id!r}>".format(
+        return "<{cls}('{prefix}...', client_id={client_id!r}, user_name={user_name!r}>".format(
             cls=self.__class__.__name__,
             client_id=self.client_id,
-            user_id=self.user_id,
+            user_name=self.user_name,
             prefix=self.prefix,
         )
 
@@ -97,12 +101,16 @@ class OAuthAccessToken(Hashed, Base):
         if orm_token and not orm_token.client_id:
             app_log.warning(
                 "Deleting stale oauth token for %s with no client",
-                orm_token.user_id,
+                orm_token.user_name,
             )
             db.delete(orm_token)
             db.commit()
             return
         return orm_token
+
+    @property
+    def user(self):
+        return get_user(self.user_name)
 
 
 class OAuthCode(Base):
@@ -113,7 +121,7 @@ class OAuthCode(Base):
     expires_at = Column(Integer)
     redirect_uri = Column(Unicode(1023))
     session_id = Column(Unicode(255))
-    user_id = Column(Unicode(1024))
+    user_name = Column(Unicode(1024))
 
     @staticmethod
     def now():
@@ -127,6 +135,10 @@ class OAuthCode(Base):
             .filter(or_(cls.expires_at == None, cls.expires_at >= cls.now()))
             .first()
         )
+
+    @property
+    def user(self):
+        return get_user(self.user_name)
 
 
 class OAuthClient(Base):

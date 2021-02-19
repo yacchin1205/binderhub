@@ -250,7 +250,7 @@ class BinderHubRequestValidator(RequestValidator):
             expires_at=int(orm.OAuthCode.now() + 300),
             # TODO: persist oauth scopes
             # scopes=request.scopes,
-            user_id=request.user,
+            user_name=self._get_user_name(request.user),
             redirect_uri=orm_client.redirect_uri,
             session_id=request.session_id,
         )
@@ -350,7 +350,7 @@ class BinderHubRequestValidator(RequestValidator):
             # scopes=scopes,
             token=token['access_token'],
             session_id=request.session_id,
-            user_id=request.user,
+            user_name=self._get_user_name(request.user),
         )
         self.db.add(orm_access_token)
         self.db.commit()
@@ -447,7 +447,7 @@ class BinderHubRequestValidator(RequestValidator):
                 "OAuth code client id mismatch: %s != %s", client_id, orm_code.client_id
             )
             return False
-        request.user = orm_code.user_id
+        request.user = orm_code.user
         request.session_id = orm_code.session_id
         # TODO: record state on oauth codes
         # TODO: specify scopes
@@ -549,6 +549,14 @@ class BinderHubRequestValidator(RequestValidator):
             - Client Credentials Grant
         """
         return True
+
+    def _get_user_name(self, user):
+        if isinstance(user, str):
+            return user
+        if 'name' not in user or 'kind' not in user or user['kind'] != 'user':
+            app_log.error("Unexpected user data: {}".format(user))
+            raise ValueError('Unexpected user data')
+        return user['name']
 
 
 class BinderHubOAuthServer(WebApplicationServer):

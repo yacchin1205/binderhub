@@ -249,7 +249,13 @@ class BuildHandler(BaseHandler):
             auth_token = self.tokenstore.get_access_token_for(user,
                                                               provider_prefix,
                                                               auth_provider_id)
-            if auth_token is None:
+            repo_token = self.get_argument('repo_token', None)
+            if auth_token is None and repo_token is not None:
+                app_log.info('Repotoken acquired: length={}'.format(len(repo_token)))
+                state = self.tokenstore.new_session(spec, user, provider_prefix, auth_provider_id)
+                self.tokenstore.register_token(user, state, repo_token, None)
+                auth_token = repo_token
+            elif auth_token is None:
                 state = self.tokenstore.new_session(spec, user, provider_prefix, auth_provider_id)
                 auth_url = provider.get_authorization_url(state, self.binderhub_url)
                 await self.emit({

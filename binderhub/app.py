@@ -781,7 +781,7 @@ class BinderHub(Application):
                 handlers.insert(-1, (re.escape(url_path_join(self.base_url, path)),
                                      handler, {
                                        'oauth_provider': oauth_provider,
-                                       'hub_url': self.hub_internal_url or self.hub_url
+                                       'hub_url': self.hub_url
                                      }))
         self.tornado_app = tornado.web.Application(handlers, **self.tornado_settings)
 

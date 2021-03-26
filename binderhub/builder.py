@@ -264,6 +264,9 @@ class BuildHandler(BaseHandler):
                     'authorization_url': auth_url,
                 })
                 return
+            self.repo_token = auth_token
+        else:
+            self.repo_token = None
 
         repo_url = self.repo_url = provider.get_repo_url()
 
@@ -557,6 +560,12 @@ class BuildHandler(BaseHandler):
                     'binder_request': self.binder_request,
                     'binder_persistent_request': self.binder_persistent_request,
                 }
+                extra_args['repo_token'] = self.repo_token
+                for key, values in self.request.query_arguments.items():
+                    if not key.startswith('useropt.'):
+                        continue
+                    log('extra_args: {}={}'.format(key, values))
+                    extra_args[key[8:]] = '\t'.join([v.decode('utf8') for v in values])
                 server_info = await launcher.launch(image=self.image_name,
                                                     username=username,
                                                     server_name=server_name,

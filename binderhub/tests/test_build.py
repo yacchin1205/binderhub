@@ -177,8 +177,11 @@ def test_rdm_hosts_passed_to_podspec_upon_submit():
         'api': 'https://api.test.jp',
     }]
     optional_envs = {'RDM_HOSTS_JSON': json.dumps(rdm_hosts)}
+
+    mock_k8s_api = _list_dind_pods_mock()
+
     build = Build(
-        mock.MagicMock(), api=mock.MagicMock(), name='test_build',
+        mock.MagicMock(), api=mock_k8s_api, name='test_build',
         namespace='build_namespace', repo_url=mock.MagicMock(), ref=mock.MagicMock(),
         git_credentials=None,
         optional_envs=optional_envs, build_image=mock.MagicMock(),
@@ -186,11 +189,10 @@ def test_rdm_hosts_passed_to_podspec_upon_submit():
         memory_limit=mock.MagicMock(), docker_host='http://mydockerregistry.local',
         node_selector=mock.MagicMock())
 
-    with mock.patch.object(build, 'api') as api_patch, \
-            mock.patch.object(build.stop_event, 'is_set', return_value=True):
+    with mock.patch.object(build.stop_event, 'is_set', return_value=True):
         build.submit()
 
-    call_args_list = api_patch.create_namespaced_pod.call_args_list
+    call_args_list = mock_k8s_api.create_namespaced_pod.call_args_list
     assert len(call_args_list) == 1
 
     args = call_args_list[0][0]
@@ -212,8 +214,11 @@ def test_weko3_hosts_passed_to_podspec_upon_submit():
         'file_base_url': 'https://test.jp/api/files',
     }]
     optional_envs = {'WEKO3_HOSTS_JSON': json.dumps(weko3_hosts)}
+
+    mock_k8s_api = _list_dind_pods_mock()
+
     build = Build(
-        mock.MagicMock(), api=mock.MagicMock(), name='test_build',
+        mock.MagicMock(), api=mock_k8s_api, name='test_build',
         namespace='build_namespace', repo_url=mock.MagicMock(), ref=mock.MagicMock(),
         git_credentials=None,
         optional_envs=optional_envs, build_image=mock.MagicMock(),
@@ -221,11 +226,10 @@ def test_weko3_hosts_passed_to_podspec_upon_submit():
         memory_limit=mock.MagicMock(), docker_host='http://mydockerregistry.local',
         node_selector=mock.MagicMock())
 
-    with mock.patch.object(build, 'api') as api_patch, \
-            mock.patch.object(build.stop_event, 'is_set', return_value=True):
+    with mock.patch.object(build.stop_event, 'is_set', return_value=True):
         build.submit()
 
-    call_args_list = api_patch.create_namespaced_pod.call_args_list
+    call_args_list = mock_k8s_api.create_namespaced_pod.call_args_list
     assert len(call_args_list) == 1
 
     args = call_args_list[0][0]

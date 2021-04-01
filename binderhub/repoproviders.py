@@ -20,7 +20,6 @@ from uuid import uuid1
 import escapism
 from prometheus_client import Gauge
 
-from tornado import gen
 from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest
 from tornado.httputil import url_concat
 
@@ -188,12 +187,10 @@ class RepoProvider(LoggingConfigurable):
                 repo_config.update(config)
         return repo_config
 
-    @gen.coroutine
-    def get_resolved_ref(self):
+    async def get_resolved_ref(self):
         raise NotImplementedError("Must be overridden in child class")
 
-    @gen.coroutine
-    def get_resolved_spec(self):
+    async def get_resolved_spec(self):
         """Return the spec with resolved ref."""
         raise NotImplementedError("Must be overridden in child class")
 
@@ -201,8 +198,7 @@ class RepoProvider(LoggingConfigurable):
         """Return the git clone-able repo URL"""
         raise NotImplementedError("Must be overridden in the child class")
 
-    @gen.coroutine
-    def get_resolved_ref_url(self):
+    async def get_resolved_ref_url(self):
         """Return the URL of repository at this commit in history"""
         raise NotImplementedError("Must be overridden in child class")
 
@@ -243,12 +239,20 @@ class ZenodoProvider(RepoProvider):
     """
     name = Unicode("Zenodo")
 
-    @gen.coroutine
-    def get_resolved_ref(self):
+    display_name = "Zenodo DOI"
+
+    labels = {
+        "text": "Zenodo DOI (10.5281/zenodo.3242074)",
+        "tag_text": "Git ref (branch, tag, or commit)",
+        "ref_prop_disabled": True,
+        "label_prop_disabled": True,
+    }
+
+    async def get_resolved_ref(self):
         client = AsyncHTTPClient()
         req = HTTPRequest("https://doi.org/{}".format(self.spec),
                           user_agent="BinderHub")
-        r = yield client.fetch(req)
+        r = await client.fetch(req)
         self.record_id = r.effective_url.rsplit("/", maxsplit=1)[1]
         return self.record_id
 
@@ -281,18 +285,27 @@ class FigshareProvider(RepoProvider):
     Users must provide a spec consisting of the Figshare DOI.
     """
     name = Unicode("Figshare")
-    url_regex = re.compile(r"(.*)/articles/([^/]+)/(\d+)(/)?(\d+)?")
 
-    @gen.coroutine
-    def get_resolved_ref(self):
+    display_name = "Figshare DOI"
+
+    url_regex = re.compile(r"(.*)/articles/([^/]+)/([^/]+)/(\d+)(/)?(\d+)?")
+
+    labels = {
+        "text": "Figshare DOI (10.6084/m9.figshare.9782777.v1)",
+        "tag_text": "Git ref (branch, tag, or commit)",
+        "ref_prop_disabled": True,
+        "label_prop_disabled": True,
+    }
+
+    async def get_resolved_ref(self):
         client = AsyncHTTPClient()
         req = HTTPRequest("https://doi.org/{}".format(self.spec),
                           user_agent="BinderHub")
-        r = yield client.fetch(req)
+        r = await client.fetch(req)
 
         match = self.url_regex.match(r.effective_url)
-        article_id = match.groups()[2]
-        article_version = match.groups()[4]
+        article_id = match.groups()[3]
+        article_version = match.groups()[5]
         if not article_version:
             article_version = "1"
         self.record_id = "{}.v{}".format(article_id, article_version)
@@ -325,12 +338,20 @@ class FigshareProvider(RepoProvider):
 class DataverseProvider(RepoProvider):
     name = Unicode("Dataverse")
 
-    @gen.coroutine
-    def get_resolved_ref(self):
+    display_name = "Dataverse DOI"
+
+    labels = {
+        "text": "Dataverse DOI (10.7910/DVN/TJCLKP)",
+        "tag_text": "Git ref (branch, tag, or commit)",
+        "ref_prop_disabled": True,
+        "label_prop_disabled": True,
+    }
+
+    async def get_resolved_ref(self):
         client = AsyncHTTPClient()
         req = HTTPRequest("https://doi.org/{}".format(self.spec),
                           user_agent="BinderHub")
-        r = yield client.fetch(req)
+        r = await client.fetch(req)
 
         search_url = urllib.parse.urlunparse(
             urllib.parse.urlparse(r.effective_url)._replace(
@@ -338,7 +359,7 @@ class DataverseProvider(RepoProvider):
             )
         )
         req = HTTPRequest(search_url, user_agent="BinderHub")
-        r = yield client.fetch(req)
+        r = await client.fetch(req)
         resp = json.loads(r.body)
 
         assert resp["status"] == "OK"
@@ -383,7 +404,17 @@ class HydroshareProvider(RepoProvider):
     Users must provide a spec consisting of the Hydroshare resource id.
     """
     name = Unicode("Hydroshare")
+
+    display_name = "Hydroshare resource"
+
     url_regex = re.compile(r".*([0-9a-f]{32}).*")
+
+    labels = {
+        "text": "Hydroshare resource id or URL",
+        "tag_text": "Git ref (branch, tag, or commit)",
+        "ref_prop_disabled": True,
+        "label_prop_disabled": True,
+    }
 
     def _parse_resource_id(self, spec):
         match = self.url_regex.match(spec)
@@ -392,13 +423,13 @@ class HydroshareProvider(RepoProvider):
         resource_id = match.groups()[0]
         return resource_id
 
-    @gen.coroutine
-    def get_resolved_ref(self):
+    async def get_resolved_ref(self):
         client = AsyncHTTPClient()
         self.resource_id = self._parse_resource_id(self.spec)
         req = HTTPRequest("https://www.hydroshare.org/hsapi/resource/{}/scimeta/elements".format(self.resource_id),
                           user_agent="BinderHub")
-        r = yield client.fetch(req)
+        r = await client.fetch(req)
+
         def parse_date(json_body):
             json_response = json.loads(json_body)
             date = next(
@@ -448,6 +479,15 @@ class GitRepoProvider(RepoProvider):
 
     name = Unicode("Git")
 
+    display_name = "Git repository"
+
+    labels = {
+        "text": "Arbitrary git repository URL (http://git.example.com/repo)",
+        "tag_text": "Git ref (branch, tag, or commit)",
+        "ref_prop_disabled": False,
+        "label_prop_disabled": False,
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.url, unresolved_ref = self.spec.split('/', 1)
@@ -456,8 +496,7 @@ class GitRepoProvider(RepoProvider):
         if not self.unresolved_ref:
             raise ValueError("`unresolved_ref` must be specified as a query parameter for the basic git provider")
 
-    @gen.coroutine
-    def get_resolved_ref(self):
+    async def get_resolved_ref(self):
         if hasattr(self, 'resolved_ref'):
             return self.resolved_ref
 
@@ -471,8 +510,7 @@ class GitRepoProvider(RepoProvider):
             if result.returncode:
                 raise RuntimeError("Unable to run git ls-remote to get the `resolved_ref`: {}".format(result.stderr))
             if not result.stdout:
-                raise ValueError("The specified branch, tag or commit SHA ('{}') was not found on the remote repository."
-                                .format(self.unresolved_ref))
+                return None
             resolved_ref = result.stdout.split(None, 1)[0]
             self.sha1_validate(resolved_ref)
             self.resolved_ref = resolved_ref
@@ -511,6 +549,8 @@ class GitLabRepoProvider(RepoProvider):
     """
 
     name = Unicode('GitLab')
+
+    display_name = "GitLab.com"
 
     hostname = Unicode('gitlab.com', config=True,
         help="""The host of the GitLab instance
@@ -561,6 +601,13 @@ class GitLabRepoProvider(RepoProvider):
             return r'username=binderhub\npassword={token}'.format(token=self.private_token)
         return ""
 
+    labels = {
+        "text": "GitLab.com repository or URL",
+        "tag_text": "Git ref (branch, tag, or commit)",
+        "ref_prop_disabled": False,
+        "label_prop_disabled": False,
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.quoted_namespace, unresolved_ref = self.spec.split('/', 1)
@@ -569,8 +616,7 @@ class GitLabRepoProvider(RepoProvider):
         if not self.unresolved_ref:
             raise ValueError("An unresolved ref is required")
 
-    @gen.coroutine
-    def get_resolved_ref(self):
+    async def get_resolved_ref(self):
         if hasattr(self, 'resolved_ref'):
             return self.resolved_ref
 
@@ -588,7 +634,7 @@ class GitLabRepoProvider(RepoProvider):
             api_url = url_concat(api_url, self.auth)
 
         try:
-            resp = yield client.fetch(api_url, user_agent="BinderHub")
+            resp = await client.fetch(api_url, user_agent="BinderHub")
         except HTTPError as e:
             if e.code == 404:
                 return None
@@ -620,6 +666,8 @@ class GitLabRepoProvider(RepoProvider):
 class GitHubRepoProvider(RepoProvider):
     """Repo provider for the GitHub service"""
     name = Unicode('GitHub')
+
+    display_name = 'GitHub'
 
     # shared cache for resolved refs
     cache = Cache(1024)
@@ -694,6 +742,13 @@ class GitHubRepoProvider(RepoProvider):
                 return r'username={token}\npassword=x-oauth-basic'.format(token=self.access_token)
         return ""
 
+    labels = {
+        "text": "GitHub repository name or URL",
+        "tag_text": "Git ref (branch, tag, or commit)",
+        "ref_prop_disabled": False,
+        "label_prop_disabled": False,
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.user, self.repo, self.unresolved_ref = tokenize_spec(self.spec)
@@ -707,8 +762,7 @@ class GitHubRepoProvider(RepoProvider):
             self.resolved_ref = await self.get_resolved_ref()
         return f"https://{self.hostname}/{self.user}/{self.repo}/tree/{self.resolved_ref}"
 
-    @gen.coroutine
-    def github_api_request(self, api_url, etag=None):
+    async def github_api_request(self, api_url, etag=None):
         client = AsyncHTTPClient()
 
         request_kwargs = {}
@@ -729,7 +783,7 @@ class GitHubRepoProvider(RepoProvider):
         )
 
         try:
-            resp = yield client.fetch(req)
+            resp = await client.fetch(req)
         except HTTPError as e:
             if e.code == 304:
                 resp = e.response
@@ -787,8 +841,7 @@ class GitHubRepoProvider(RepoProvider):
 
         return resp
 
-    @gen.coroutine
-    def get_resolved_ref(self):
+    async def get_resolved_ref(self):
         if hasattr(self, 'resolved_ref'):
             return self.resolved_ref
 
@@ -808,7 +861,7 @@ class GitHubRepoProvider(RepoProvider):
                 return None
             etag = None
 
-        resp = yield self.github_api_request(api_url, etag=etag)
+        resp = await self.github_api_request(api_url, etag=etag)
         if resp is None:
             self.log.debug("Caching 404 on %s", api_url)
             self.cache_404.set(api_url, True)
@@ -862,14 +915,24 @@ class GistRepoProvider(GitHubRepoProvider):
     If master or no ref is specified the latest revision will be used.
     """
 
-    name = Unicode('Gist')
-    hostname = Unicode('gist.github.com')
+    name = Unicode("Gist")
+
+    display_name = "Gist"
+
+    hostname = Unicode("gist.github.com")
 
     allow_secret_gist = Bool(
         default_value=False,
         config=True,
         help="Flag for allowing usages of secret Gists.  The default behavior is to disallow secret gists.",
     )
+
+    labels = {
+        "text": "Gist ID (username/gistId) or URL",
+        "tag_text": "Git commit SHA",
+        "ref_prop_disabled": False,
+        "label_prop_disabled": False,
+    }
 
     def __init__(self, *args, **kwargs):
         # We dont need to initialize entirely the same as github
@@ -889,15 +952,14 @@ class GistRepoProvider(GitHubRepoProvider):
             self.resolved_ref = await self.get_resolved_ref()
         return f'https://{self.hostname}/{self.user}/{self.gist_id}/{self.resolved_ref}'
 
-    @gen.coroutine
-    def get_resolved_ref(self):
+    async def get_resolved_ref(self):
         if hasattr(self, 'resolved_ref'):
             return self.resolved_ref
 
         api_url = f"https://api.github.com/gists/{self.gist_id}"
         self.log.debug("Fetching %s", api_url)
 
-        resp = yield self.github_api_request(api_url)
+        resp = await self.github_api_request(api_url)
         if resp is None:
             return None
 
@@ -909,7 +971,7 @@ class GistRepoProvider(GitHubRepoProvider):
                              "'GistRepoProvider.allow_secret_gist = True'")
 
         all_versions = [e['version'] for e in ref_info['history']]
-        if (len(self.unresolved_ref) == 0) or (self.unresolved_ref == 'master'):
+        if self.unresolved_ref in {"", "HEAD", "master"}:
             self.resolved_ref = all_versions[0]
         else:
             if self.unresolved_ref not in all_versions:
@@ -934,13 +996,23 @@ class RDMProvider(RepoProvider):
 
     name = Unicode('RDM')
 
+    display_name = 'RDM'
+
     hosts = List(config=True,
         help="""RDM hosts
         Loaded from RDM_HOSTS_JSON env by default."""
     )
+
     @default('hosts')
     def _private_token_default(self):
         return json.loads(os.getenv('RDM_HOSTS_JSON', '[]'))
+
+    labels = {
+        "text": "RDM URL",
+        "tag_text": "Git ref (branch, tag, or commit)",
+        "ref_prop_disabled": True,
+        "label_prop_disabled": True,
+    }
 
     def __init__(self, *args, **kwargs):
         # We dont need to initialize entirely the same as github
@@ -1004,13 +1076,23 @@ class WEKO3Provider(RepoProvider):
 
     name = Unicode('WEKO3')
 
+    display_name = 'WEKO3'
+
     hosts = List(config=True,
         help="""WEKO3 hosts
         Loaded from WEKO3_HOSTS_JSON env by default."""
     )
+
     @default('hosts')
     def _private_token_default(self):
         return json.loads(os.getenv('WEKO3_HOSTS_JSON', '[]'))
+
+    labels = {
+        "text": "WEKO3 URL",
+        "tag_text": "Git ref (branch, tag, or commit)",
+        "ref_prop_disabled": True,
+        "label_prop_disabled": True,
+    }
 
     def __init__(self, *args, **kwargs):
         # We dont need to initialize entirely the same as github

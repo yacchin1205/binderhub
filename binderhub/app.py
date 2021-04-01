@@ -2,11 +2,12 @@
 The binderhub application
 """
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
+import ipaddress
 import json
 import logging
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 from glob import glob
 import tempfile
 from urllib.parse import urlparse
@@ -21,7 +22,17 @@ import tornado.options
 import tornado.log
 from tornado.log import app_log
 import tornado.web
-from traitlets import Unicode, Integer, Bool, Dict, validate, TraitError, Union, default
+from traitlets import (
+    Bool,
+    Dict,
+    Integer,
+    TraitError,
+    Unicode,
+    Union,
+    default,
+    observe,
+    validate,
+)
 from traitlets.config import Application
 from jupyterhub.services.auth import HubOAuthCallbackHandler
 from jupyterhub.traitlets import Callable
@@ -29,9 +40,11 @@ from jupyterhub.traitlets import Callable
 from .base import AboutHandler, Custom404, VersionHandler
 from .build import Build
 from .builder import BuildHandler
+from .config import ConfigHandler
 from .health import HealthHandler
 from .launcher import Launcher
 from .log import log_request
+from .repoproviders import RepoProvider
 from .registry import DockerRegistry
 from .main import MainHandler, ParameterizedMainHandler, LegacyRedirectHandler
 from .repoproviders import (GitHubRepoProvider, GitRepoProvider,
@@ -392,23 +405,22 @@ class BinderHub(Application):
         config=True,
     )
 
-    hub_internal_url = Unicode(
+    hub_url_local = Unicode(
         help="""
-        The base URL of the JupyterHub instance where users will run.
-        (Internal use)
+        The base URL of the JupyterHub instance for local/internal traffic
 
-        e.g. http://hub:8081/
+        If local/internal network connections from the BinderHub process should access
+        JupyterHub using a different URL than public/external traffic set this, default
+        is hub_url
         """,
         config=True,
     )
-    @validate('hub_url')
+    @default('hub_url_local')
+    def _default_hub_url_local(self):
+        return self.hub_url
+
+    @validate('hub_url', 'hub_url_local')
     def _add_slash(self, proposal):
-        """trait validator to ensure hub_url ends with a trailing slash"""
-        if proposal.value is not None and not proposal.value.endswith('/'):
-            return proposal.value + '/'
-        return proposal.value
-    @validate('hub_internal_url')
-    def _add_slash_to_hub_internal_url(self, proposal):
         """trait validator to ensure hub_url ends with a trailing slash"""
         if proposal.value is not None and not proposal.value.endswith('/'):
             return proposal.value + '/'
@@ -425,7 +437,7 @@ class BinderHub(Application):
     )
 
     build_image = Unicode(
-        'jupyter/repo2docker:0.10.0',
+        'jupyter/repo2docker:2021.01.0',
         help="""
         The repo2docker image to be used for doing builds
         """,
@@ -458,6 +470,18 @@ class BinderHub(Application):
         List of Repo Providers to register and try
         """
     )
+
+    @validate('repo_providers')
+    def _validate_repo_providers(self, proposal):
+        """trait validator to ensure there is at least one repo provider"""
+        if not proposal.value:
+            raise TraitError("Please provide at least one repo provider")
+
+        if any([not issubclass(provider, RepoProvider) for provider in proposal.value.values()]):
+            raise TraitError("Repository providers should inherit from 'binderhub.RepoProvider'")
+
+        return proposal.value
+
     concurrent_build_limit = Integer(
         32,
         config=True,
@@ -498,6 +522,39 @@ class BinderHub(Application):
         Build infrastructure is kubernetes cluster + docker. This is useful for pure HTML/CSS/JS local development.
         """
     )
+
+    ban_networks = Dict(
+        config=True,
+        help="""
+        Dict of networks from which requests should be rejected with 403
+
+        Keys are CIDR notation (e.g. '1.2.3.4/32'),
+        values are a label used in log / error messages.
+        CIDR strings will be parsed with `ipaddress.ip_network()`.
+        """,
+    )
+
+    @validate("ban_networks")
+    def _cast_ban_networks(self, proposal):
+        """Cast CIDR strings to IPv[4|6]Network objects"""
+        networks = {}
+        for cidr, message in proposal.value.items():
+            networks[ipaddress.ip_network(cidr)] = message
+
+        return networks
+
+    ban_networks_min_prefix_len = Integer(
+        1,
+        help="The shortest prefix in ban_networks",
+    )
+
+    @observe("ban_networks")
+    def _update_prefix_len(self, change):
+        if not change.new:
+            min_len = 1
+        else:
+            min_len = min(net.prefixlen for net in change.new)
+        self.ban_networks_min_prefix_len = min_len or 1
 
     tornado_settings = Dict(
         config=True,
@@ -614,7 +671,7 @@ class BinderHub(Application):
         self.launcher = Launcher(
             parent=self,
             hub_url=self.hub_url,
-            hub_internal_url=self.hub_internal_url or self.hub_url,
+            hub_url_local=self.hub_url_local,
             hub_api_token=self.hub_api_token,
             create_user=not self.auth_enabled,
         )
@@ -637,6 +694,8 @@ class BinderHub(Application):
                 "debug": self.debug,
                 "launcher": self.launcher,
                 "appendix": self.appendix,
+                "ban_networks": self.ban_networks,
+                "ban_networks_min_prefix_len": self.ban_networks_min_prefix_len,
                 "build_namespace": self.build_namespace,
                 "build_image": self.build_image,
                 "build_node_selector": self.build_node_selector,
@@ -711,7 +770,8 @@ class BinderHub(Application):
                 tornado.web.StaticFileHandler,
                 {'path': os.path.join(self.tornado_settings['static_path'], 'images')}),
             (r'/about', AboutHandler),
-            (r'/health', HealthHandler, {'hub_url': self.hub_internal_url or self.hub_url}),
+            (r'/health', HealthHandler, {'hub_url': self.hub_url_local}),
+            (r'/_config', ConfigHandler),
             (r'/repoauth/callback', RepoAuthCallbackHandler, {'binderhub_url': self.binderhub_url}),
             (r'/', MainHandler),
             (r'.*', Custom404),

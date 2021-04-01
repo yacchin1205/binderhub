@@ -12,7 +12,7 @@ from kubernetes import client, watch
 from tornado.ioloop import IOLoop
 from tornado.log import app_log
 
-from .utils import rendezvous_rank
+from .utils import rendezvous_rank, KUBE_REQUEST_TIMEOUT
 
 
 class Build:
@@ -185,13 +185,16 @@ class Build:
         repository prefer to schedule on the same node in order to reuse the
         docker layer cache of previous builds.
         """
-        dind_pods = self.api.list_namespaced_pod(
+        resp = self.api.list_namespaced_pod(
             self.namespace,
             label_selector="component=dind,app=binder",
+            _request_timeout=KUBE_REQUEST_TIMEOUT,
+            _preload_content=False,
         )
+        dind_pods = json.loads(resp.read())
 
         if self.sticky_builds and dind_pods:
-            node_names = [pod.spec.node_name for pod in dind_pods.items]
+            node_names = [pod["spec"]["nodeName"] for pod in dind_pods["items"]]
             ranked_nodes = rendezvous_rank(node_names, self.repo_url)
             best_node_name = ranked_nodes[0]
 
@@ -309,7 +312,11 @@ class Build:
         )
 
         try:
-            ret = self.api.create_namespaced_pod(self.namespace, self.pod)
+            ret = self.api.create_namespaced_pod(
+                self.namespace,
+                self.pod,
+                _request_timeout=KUBE_REQUEST_TIMEOUT,
+            )
         except client.rest.ApiException as e:
             if e.status == 409:
                 # Someone else created it!
@@ -325,10 +332,11 @@ class Build:
             w = watch.Watch()
             try:
                 for f in w.stream(
-                        self.api.list_namespaced_pod,
-                        self.namespace,
-                        label_selector="name={}".format(self.name),
-                        timeout_seconds=30,
+                    self.api.list_namespaced_pod,
+                    self.namespace,
+                    label_selector="name={}".format(self.name),
+                    timeout_seconds=30,
+                    _request_timeout=KUBE_REQUEST_TIMEOUT,
                 ):
                     if f['type'] == 'DELETED':
                         self.progress('pod.phasechange', 'Deleted')
@@ -353,11 +361,13 @@ class Build:
         """Stream a pod's logs"""
         app_log.info("Watching logs of %s", self.name)
         for line in self.api.read_namespaced_pod_log(
-                self.name,
-                self.namespace,
-                follow=True,
-                tail_lines=self.log_tail_lines,
-                _preload_content=False):
+            self.name,
+            self.namespace,
+            follow=True,
+            tail_lines=self.log_tail_lines,
+            _request_timeout=(3, None),
+            _preload_content=False,
+        ):
             if self.stop_event.is_set():
                 app_log.info("Stopping logs of %s", self.name)
                 return
@@ -387,7 +397,9 @@ class Build:
             self.api.delete_namespaced_pod(
                 name=self.name,
                 namespace=self.namespace,
-                body=client.V1DeleteOptions(grace_period_seconds=0))
+                body=client.V1DeleteOptions(grace_period_seconds=0),
+                _request_timeout=KUBE_REQUEST_TIMEOUT,
+            )
         except client.rest.ApiException as e:
             if e.status == 404:
                 # Is ok, someone else has already deleted it

@@ -2,12 +2,12 @@ apiVersion: v1
 kind: Service
 metadata:
   name: binder
-  annotations: {{ toJson .Values.service.annotations }}
-  labels: {{ toJson .Values.service.labels }}
+  annotations: {{ .Values.service.annotations | toJson }}
+  labels: {{ .Values.service.labels | toJson }}
 spec:
   type: {{ .Values.service.type }}
-  {{ if .Values.service.loadBalancerIP -}}
-  loadBalancerIP: {{ .Values.service.loadBalancerIP | quote }}
+  {{- with .Values.service.loadBalancerIP }}
+  loadBalancerIP: {{ . | quote }}
   {{- end }}
   {{- if and (eq .Values.service.type "LoadBalancer") .Values.service.loadBalancerSourceRanges }}
   loadBalancerSourceRanges:
@@ -23,8 +23,8 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 8585
-      {{ if .Values.service.nodePort -}}
-      nodePort: {{ .Values.service.nodePort }}
+      {{- with .Values.service.nodePort }}
+      nodePort: {{ . }}
       {{- end }}
       {{ if .Values.service.portName -}}
       name: {{ .Values.service.portName }}

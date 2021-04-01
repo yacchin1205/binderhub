@@ -64,6 +64,9 @@ jupyterhub:
   rbac:
     enabled: true
   hub:
+    config:
+      JupyterHub:
+        authenticator_class: nullauthenticator.NullAuthenticator
     extraConfig:
       00-binder: |
         from tornado import web
@@ -91,6 +94,10 @@ jupyterhub:
                     allow_origin = cors.get('allowOrigin')
                     if allow_origin:
                         args.append('--NotebookApp.allow_origin=' + allow_origin)
+                    # allow_origin=* doesn't properly allow cross-origin requests to single files
+                    # see https://github.com/jupyter/notebook/pull/5898
+                    if allow_origin == '*':
+                        args.append('--NotebookApp.allow_origin_pat=.*')
                     args += self.args
                 return args
 
@@ -122,11 +129,6 @@ jupyterhub:
       binder:
         admin: true
         apiToken:
-  auth:
-    type: custom
-    custom:
-      # disable login (users created exclusively via API)
-      className: nullauthenticator.NullAuthenticator
   singleuser:
     # start jupyter notebook
     cmd: jupyter-notebook
@@ -142,6 +144,18 @@ jupyterhub:
       enabled: false
 
 deployment:
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 0
+    periodSeconds: 5
+    failureThreshold: 1000  # we rely on the liveness probe to resolve issues if needed
+    timeoutSeconds: 3
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    failureThreshold: 3
+    timeoutSeconds: 10
   labels: {}
 
 dind:
@@ -188,6 +202,9 @@ ingress:
   annotations: {}
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
+  pathSuffix: ''
+    # Suffix added to Ingress's routing path pattern.
+    # Specify `*` if your ingress matches path by glob pattern.
   tls: []
     # Secrets must be manually created in the namespace.
     # - secretName: chart-example-tls
@@ -198,3 +215,4 @@ initContainers: []
 extraVolumes: []
 extraVolumeMounts: []
 extraEnv: []
+podAnnotations: {}

@@ -2,6 +2,7 @@
 Handlers for working with version control services (i.e. GitHub) for builds.
 """
 
+import asyncio
 import hashlib
 from http.client import responses
 import json
@@ -10,7 +11,6 @@ import time
 import escapism
 
 import docker
-from tornado.concurrent import chain_future, Future
 from tornado import gen
 from tornado.httpclient import HTTPClientError
 from tornado.web import Finish, authenticated
@@ -24,6 +24,7 @@ from .base import BaseHandler
 from .build import Build, FakeBuild
 from .repoauth import TokenStore
 from .utils import url_path_join
+from .utils import KUBE_REQUEST_TIMEOUT
 
 # Separate buckets for builds and launches.
 # Builds and launches have very different characteristic times,
@@ -185,10 +186,18 @@ class BuildHandler(BaseHandler):
         self.tokenstore = TokenStore(self.settings['repo_token_store'])
 
     async def fail(self, message):
-        await self.emit({
-            'phase': 'failed',
-            'message': message + '\n',
-        })
+        await self.emit(
+            {
+                "phase": "failed",
+                "message": message + "\n",
+            }
+        )
+
+    def set_default_headers(self):
+        super().set_default_headers()
+        # set up for sending event streams
+        self.set_header("content-type", "text/event-stream")
+        self.set_header("cache-control", "no-cache")
 
     @authenticated
     async def get(self, provider_prefix, _unescaped_spec):
@@ -208,10 +217,6 @@ class BuildHandler(BaseHandler):
         """
         prefix = '/build/' + provider_prefix
         spec = self.get_spec_from_request(prefix)
-
-        # set up for sending event streams
-        self.set_header('content-type', 'text/event-stream')
-        self.set_header('cache-control', 'no-cache')
 
         # Verify if the provider is valid for EventSource.
         # EventSource cannot handle HTTP errors, so we must validate and send
@@ -272,8 +277,22 @@ class BuildHandler(BaseHandler):
         except Exception as e:
             await self.fail("Error resolving ref for %s: %s" % (key, e))
             return
+
         if ref is None:
-            await self.fail("Could not resolve ref for %s. Double check your URL." % key)
+            error_message = ["Could not resolve ref for %s. Double check your URL." % key]
+
+            if provider.name == "GitHub":
+                error_message.append('GitHub recently changed default branches from "master" to "main".')
+
+                if provider.unresolved_ref == "master":
+                    error_message.append('Did you mean the "main" branch?')
+                elif provider.unresolved_ref == "main":
+                    error_message.append('Did you mean the "master" branch?')
+
+            else:
+                error_message.append("Is your repo public?")
+
+            await self.fail(" ".join(error_message))
             return
 
         self.ref_url = await provider.get_resolved_ref_url()
@@ -484,22 +503,21 @@ class BuildHandler(BaseHandler):
 
         # TODO: run a watch to keep this up to date in the background
         pool = self.settings['executor']
-        f = pool.submit(kube.list_namespaced_pod,
+        f = pool.submit(
+            kube.list_namespaced_pod,
             self.settings["build_namespace"],
             label_selector='app=jupyterhub,component=singleuser-server',
+            _request_timeout=KUBE_REQUEST_TIMEOUT,
+            _preload_content=False,
         )
-        # concurrent.futures.Future isn't awaitable
-        # wrap in tornado Future
-        # tornado 5 will have `.run_in_executor`
-        tf = Future()
-        chain_future(f, tf)
-        pods = await tf
-        for pod in pods.items:
+        resp = await asyncio.wrap_future(f)
+        pods = json.loads(resp.read())
+        for pod in pods["items"]:
             total_pods += 1
-            for container in pod.spec.containers:
+            for container in pod["spec"]["containers"]:
                 # is the container running the same image as us?
                 # if so, count one for the current repo.
-                image = container.image.rsplit(':', 1)[0]
+                image = container["image"].rsplit(":", 1)[0]
                 if image == image_no_tag:
                     matching_pods += 1
                     break

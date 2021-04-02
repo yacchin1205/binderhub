@@ -28,3 +28,12 @@ c.BinderHub.debug = True
 c.BinderHub.hub_url = 'http://{}:30902'.format(jupyterhub_ip)
 c.BinderHub.hub_api_token = 'dummy-binder-secret-token'
 c.BinderHub.use_registry = False
+
+c.BinderHub.oauth2_provider_enabled = True
+
+c.BinderHub.oauth_db_url = 'sqlite:///binderhub-oauth.sqlite'
+c.BinderHub.oauth_clients = [{'client_id': 'AAAA',
+                              'client_secret': 'BBBB',
+                              'redirect_uri': 'http://192.168.168.167:5000/project/binderhub/callback',
+                              'description': 'Some Client'}]
+c.BinderHub.oauth_no_confirm_list = ['AAAA']

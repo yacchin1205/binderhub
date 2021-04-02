@@ -26,6 +26,7 @@ from traitlets import (
     Bool,
     Dict,
     Integer,
+    List,
     TraitError,
     Unicode,
     Union,
@@ -58,6 +59,9 @@ from .utils import ByteSpecification, url_path_join
 from .events import EventLog
 
 from .repoauth import RepoAuthCallbackHandler
+from .oauth import (default_handlers as oauth_handlers,
+                    make_provider as oauth_make_provider,
+                    orm as oauth_orm)
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -197,6 +201,37 @@ class BinderHub(Application):
         help="""If JupyterHub authentication enabled,
         require user to login (don't create temporary users during launch) and
         start the new server for the logged in user.""",
+        config=True)
+
+    oauth2_provider_enabled = Bool(
+        False,
+        help="""
+        Whether OAuth2 provider is enabled.
+        """,
+        config=True)
+
+    oauth_db_url = Unicode(
+        'sqlite:///binderhub-oauth.sqlite',
+        help="url for the database. e.g. `sqlite:///binderhub-oauth.sqlite`",
+    ).tag(config=True)
+
+    oauth_clients = List(
+        [],
+        help="""
+        Definition of OAuth2 Client.
+
+        e.g. {'id': 'AAAA',
+              'secret': 'BBBB',
+              'redirect_uri': 'https://host/callback',
+              'description': 'Some Client'}
+        """,
+        config=True)
+
+    oauth_no_confirm_list = List(
+        [],
+        help="""
+        List of OAuth client id which requires no confirmation.
+        """,
         config=True)
 
     port = Integer(
@@ -565,6 +600,14 @@ class BinderHub(Application):
         """
     )
 
+    allowed_hosts = List(
+        Unicode(),
+        help="""List of allowed hosts.
+
+        If this config is set, JupyterHub will send 'Access-Control-Allow-Origin' for requests by the allowed host.
+        """,
+    ).tag(config=True)
+
     template_variables = Dict(
         config=True,
         help="Extra variables to supply to jinja templates when rendering.",
@@ -714,6 +757,7 @@ class BinderHub(Application):
                 "about_message": self.about_message,
                 "banner_message": self.banner_message,
                 "extra_footer_scripts": self.extra_footer_scripts,
+                "allowed_hosts": self.allowed_hosts,
                 "jinja2_env": jinja_env,
                 "build_memory_limit": self.build_memory_limit,
                 "build_memory_request": self.build_memory_request,
@@ -786,6 +830,20 @@ class BinderHub(Application):
                                  url_path_join(self.base_url, 'oauth_callback')
             oauth_redirect_uri = urlparse(oauth_redirect_uri).path
             handlers.insert(-1, (re.escape(oauth_redirect_uri), HubOAuthCallbackHandler))
+        if self.oauth2_provider_enabled:
+            self.log.debug('Enables OAuth2 Provider')
+            self.tornado_settings['oauth_no_confirm_list'] = self.oauth_no_confirm_list
+            session_factory = oauth_orm.new_session_factory(self.oauth_db_url)
+            oauth_provider, token_provider = oauth_make_provider(session_factory)
+            self.tornado_settings['oauth2_token_provider'] = token_provider
+            for oauth_client in self.oauth_clients:
+                oauth_provider.add_client(**oauth_client)
+            for path, handler in oauth_handlers:
+                handlers.insert(-1, (re.escape(url_path_join(self.base_url, path)),
+                                     handler, {
+                                       'oauth_provider': oauth_provider,
+                                       'hub_url': self.hub_url
+                                     }))
         self.tornado_app = tornado.web.Application(handlers, **self.tornado_settings)
 
     def stop(self):

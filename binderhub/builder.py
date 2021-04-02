@@ -254,7 +254,13 @@ class BuildHandler(BaseHandler):
             auth_token = self.tokenstore.get_access_token_for(user,
                                                               provider_prefix,
                                                               auth_provider_id)
-            if auth_token is None:
+            repo_token = self.get_argument('repo_token', None)
+            if auth_token is None and repo_token is not None:
+                app_log.info('Repotoken acquired: length={}'.format(len(repo_token)))
+                state = self.tokenstore.new_session(spec, user, provider_prefix, auth_provider_id)
+                self.tokenstore.register_token(user, state, repo_token, None)
+                auth_token = repo_token
+            elif auth_token is None:
                 state = self.tokenstore.new_session(spec, user, provider_prefix, auth_provider_id)
                 auth_url = provider.get_authorization_url(state, self.binderhub_url)
                 await self.emit({
@@ -263,6 +269,9 @@ class BuildHandler(BaseHandler):
                     'authorization_url': auth_url,
                 })
                 return
+            self.repo_token = auth_token
+        else:
+            self.repo_token = None
 
         repo_url = self.repo_url = provider.get_repo_url()
 
@@ -550,6 +559,8 @@ class BuildHandler(BaseHandler):
             if self.settings['auth_enabled']:
                 # get logged in user's name
                 user_model = self.hub_auth.get_user(self)
+                if user_model is None:
+                    user_model = self.get_current_user()
                 username = user_model['name']
                 if launcher.allow_named_servers:
                     # user can launch multiple servers, so create a unique server name
@@ -567,6 +578,12 @@ class BuildHandler(BaseHandler):
                     'binder_request': self.binder_request,
                     'binder_persistent_request': self.binder_persistent_request,
                 }
+                extra_args['repo_token'] = self.repo_token
+                for key, values in self.request.query_arguments.items():
+                    if not key.startswith('useropt.'):
+                        continue
+                    log('extra_args: {}={}'.format(key, values))
+                    extra_args[key[8:]] = '\t'.join([v.decode('utf8') for v in values])
                 server_info = await launcher.launch(image=self.image_name,
                                                     username=username,
                                                     server_name=server_name,

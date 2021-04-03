@@ -17,3 +17,5 @@ prometheus_client
 python-json-logger
 tornado>=5.1
 traitlets
+oauthlib>=3.0
+SQLAlchemy>=1.1

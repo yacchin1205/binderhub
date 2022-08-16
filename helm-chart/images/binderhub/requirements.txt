@@ -73,7 +73,7 @@ jsonschema==4.9.1
     #   jupyter-telemetry
 jupyter-telemetry==0.1.0
     # via jupyterhub
-jupyterhub==2.3.1
+git+https://github.com/yacchin1205/jupyterhub.git@feature/return-on-error-url
     # via
     #   -r binderhub.in
     #   -r requirements.in

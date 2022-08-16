@@ -36,7 +36,7 @@ WORKDIR /
 # The slim version doesn't include git as required by binderhub
 RUN apt-get update \
  && apt-get install --yes \
-        git \
+        git build-essential \
  && rm -rf /var/lib/apt/lists/*
 
 

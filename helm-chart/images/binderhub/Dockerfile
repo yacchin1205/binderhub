@@ -30,8 +30,18 @@ RUN pip wheel pycurl --wheel-dir ./dist
 
 # The final stage
 # ---------------
-FROM python:3.8-slim-$DIST
+FROM python:3.8-$DIST
 WORKDIR /
+
+ARG DIST
+
+# Install node as required to package binderhub to a wheel
+RUN echo "deb http://deb.nodesource.com/node_14.x $DIST main" > /etc/apt/sources.list.d/nodesource.list \
+ && curl -s https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -
+RUN apt-get update \
+ && apt-get install --yes \
+        nodejs \
+ && rm -rf /var/lib/apt/lists/*
 
 # The slim version doesn't include git as required by binderhub
 RUN apt-get update \

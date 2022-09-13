@@ -11,7 +11,7 @@ docker
 escapism
 jinja2
 jsonschema
-git+https://github.com/yacchin1205/jupyterhub.git@feature/return-on-error-url
+jupyterhub @ git+https://github.com/yacchin1205/jupyterhub.git@feature/return-on-error-url#egg=jupyterhub-2.3.1
 kubernetes
 prometheus_client
 python-json-logger

@@ -15,8 +15,8 @@ rbac:
 nodeSelector: {}
 
 image:
-  name: gcr.io/nii-ap-ops/k8s-binderhub-binderhub
-  tag: '0.2.0-jhub-1.1.3'
+  name: yacchin1205/k8s-binderhub-binderhub
+  tag: '0.2.0-jhub-1.1.3.n044.h43ed3ef'
 
 # registry here is only used to create docker config.json
 registry:
@@ -175,9 +175,9 @@ dind:
 imageCleaner:
   enabled: true
   image:
-    name: gcr.io/nii-ap-ops/k8s-binderhub-image-cleaner
-    tag: '0.2.0-jhub-1.1.3'
-    repository: gcr.io/nii-ap-ops/k8s-binderhub-image-cleaner
+    name: yacchin1205/k8s-binderhub-image-cleaner
+    tag: '0.2.0-jhub-1.1.3.n001.h0fe83ec'
+    repository: yacchin1205/k8s-binderhub-image-cleaner
   # delete an image at most every 5 seconds
   delay: 5
   # Interpret threshold values as percentage or bytes

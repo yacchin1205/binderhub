@@ -5,10 +5,10 @@
 #       helm-chart folder.
 charts:
   - name: binderhub
-    imagePrefix: gcr.io/nii-ap-ops/k8s-binderhub-
+    imagePrefix: yacchin1205/k8s-binderhub-
     repo:
-      git: RCOSDP/CS-jhub-helm-chart
-      published: https://rcosdp.github.io/CS-jhub-helm-chart
+      git: yacchin1205/cs-bhub-helm-chart
+      published: https://yacchin1205.github.io/cs-bhub-helm-chart
     resetTag: local
     resetVersion: 0.2.0
     images:

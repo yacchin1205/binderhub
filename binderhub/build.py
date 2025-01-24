@@ -138,6 +138,7 @@ class BuildExecutor(LoggingConfigurable):
         help="""
         Optional environment variables to be passed to the build pod.
         """,
+        allow_none=True,
         config=True,
     )
 

@@ -14,7 +14,7 @@ await_jupyterhub() {
 await_binderhub() {
     # accepts the release name as a parameter
     await_jupyterhub \
-    kubectl-argo-rollouts status --watch --timeout 300s binder
+    kubectl-argo-rollouts status --watch --timeout 300s binder \
  && kubectl rollout status --watch --timeout 300s deployment/binder \
  && (
         if kubectl get "daemonset/${1}-dind" > /dev/null 2>&1; then

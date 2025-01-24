@@ -1054,7 +1054,7 @@ class BinderHub(Application):
         handlers = [
             (r"/metrics", MetricsHandler),
             (r"/versions", VersionHandler),
-            (r"/build/([^/]+)/(.+)", BuildHandler),
+            (r"/build/([^/]+)/(.+)", BuildHandler, {'binderhub_url': self.binderhub_url}),
             (r"/rdm/([^/]+)/rcosrepo/import/([^/]+)(/.*)?", RDMRedirectHandler),
             (r"/rdm/([^/]+)/([^/]+)(/.*)?", RDMRedirectHandler),
             (r"/weko3/([^/]+)/([^/]+)(/.+)", WEKO3RedirectHandler),

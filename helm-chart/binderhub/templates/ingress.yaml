@@ -31,7 +31,6 @@ spec:
       host: {{ . | quote }}
       {{- end }}
     {{- end }}
-    {{- end }}
   {{- if and .Values.ingress.https.enabled (eq .Values.ingress.https.type "kube-lego") }}
   tls:
     - secretName: kubelego-tls-binder-{{ .Release.Name }}

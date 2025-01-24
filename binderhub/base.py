@@ -173,7 +173,7 @@ class BaseHandler(HubOAuthenticated, web.RequestHandler):
         origin = self.request.headers.get('Origin', None)
         if origin is None:
             return False
-        domain = urlparse(origin).netloc
+        domain = urllib.parse.urlparse(origin).netloc
         if ':' in domain:
             domain = domain.split(':')[0]
         return domain in allowed_hosts

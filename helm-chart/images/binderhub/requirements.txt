@@ -198,6 +198,10 @@ rpds-py==0.22.3
     #   referencing
 rsa==4.9
     # via google-auth
+ruamel-yaml==0.18.10
+    # via -r helm-chart/images/binderhub/requirements.in
+ruamel-yaml-clib==0.2.12
+    # via ruamel-yaml
 six==1.17.0
     # via
     #   kubernetes

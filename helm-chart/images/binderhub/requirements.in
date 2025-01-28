@@ -22,3 +22,6 @@ kubernetes==9.*
 #
 pycurl
 -r ../../../requirements.txt
+
+# TODO: ruamel
+ruamel-yaml==0.18.10

@@ -2,7 +2,7 @@ docker
 escapism
 jinja2
 jsonschema
-jupyterhub @ git+https://github.com/RCOSDP/CS-jupyterhub.git@master
+jupyterhub @ git+https://github.com/yacchin1205/jupyterhub.git@feature/upstream-2025-01
 kubernetes
 prometheus_client
 pyjwt>=2

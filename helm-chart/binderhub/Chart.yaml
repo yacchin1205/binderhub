@@ -1,7 +1,7 @@
 # Chart.yaml v2 reference: https://helm.sh/docs/topics/charts/#the-chartyaml-file
 apiVersion: v2
 name: binderhub
-version: 0.0.1-set.by.chartpress
+version: 0.2.1-0.dev.git.2401.he79fc53
 dependencies:
   # Source code:    https://github.com/jupyterhub/zero-to-jupyterhub-k8s
   # Latest version: https://github.com/jupyterhub/zero-to-jupyterhub-k8s/tags
@@ -12,8 +12,8 @@ dependencies:
   #            and run "./dependencies freeze --upgrade".
   #
   - name: jupyterhub
-    version: "3.2.1-20240209"
-    repository: "https://rcosdp.github.io/CS-jhub-helm-chart/"
+    version: "4.1.1-0.dev.git.6950.ha29836ab"
+    repository: "https://yacchin1205.github.io/cs-jhub-helm-chart/"
 description: |-
   BinderHub is like a JupyterHub that automatically builds environments for the
   users based on repo2docker. A BinderHub is by default not configured to

@@ -1231,7 +1231,17 @@ class RDMProvider(RepoProvider):
 
     name = Unicode('RDM')
 
-    display_name = 'RDM'
+    display_config = {
+        "displayName": "RDM",
+        "id": "rdm",
+        "spec": {"validateRegex": r".+"},
+        "repo": {
+            "label": "RDM URL",
+            "placeholder": "RDM URL",
+            "urlEncode": True,
+        },
+        "ref": {"enabled": False},
+    }
 
     hosts = List(config=True,
         help="""RDM hosts
@@ -1241,13 +1251,6 @@ class RDMProvider(RepoProvider):
     @default('hosts')
     def _private_token_default(self):
         return json.loads(os.getenv('RDM_HOSTS_JSON', '[]'))
-
-    labels = {
-        "text": "RDM URL",
-        "tag_text": "Git ref (branch, tag, or commit)",
-        "ref_prop_disabled": True,
-        "label_prop_disabled": True,
-    }
 
     def __init__(self, *args, **kwargs):
         # We dont need to initialize entirely the same as github
@@ -1336,7 +1339,17 @@ class WEKO3Provider(RepoProvider):
 
     name = Unicode('WEKO3')
 
-    display_name = 'WEKO3'
+    display_config = {
+        "displayName": "WEKO3",
+        "id": "weko3",
+        "spec": {"validateRegex": r".+"},
+        "repo": {
+            "label": "WEKO3 URL",
+            "placeholder": "WEKO3 URL",
+            "urlEncode": True,
+        },
+        "ref": {"enabled": False},
+    }
 
     hosts = List(config=True,
         help="""WEKO3 hosts
@@ -1346,13 +1359,6 @@ class WEKO3Provider(RepoProvider):
     @default('hosts')
     def _private_token_default(self):
         return json.loads(os.getenv('WEKO3_HOSTS_JSON', '[]'))
-
-    labels = {
-        "text": "WEKO3 URL",
-        "tag_text": "Git ref (branch, tag, or commit)",
-        "ref_prop_disabled": True,
-        "label_prop_disabled": True,
-    }
 
     def __init__(self, *args, **kwargs):
         # We dont need to initialize entirely the same as github

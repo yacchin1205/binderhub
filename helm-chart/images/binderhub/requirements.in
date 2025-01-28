@@ -9,7 +9,7 @@ google-cloud-logging==3.*
 
 # jupyterhub and kubernetes is pinned to match the JupyterHub Helm chart's
 # version of jupyterhub
-git+https://github.com/RCOSDP/CS-jupyterhub.git@master
+git+https://github.com/yacchin1205/jupyterhub.git@feature/upstream-2025-01
 
 # https://github.com/kubernetes-client/python
 kubernetes==9.*

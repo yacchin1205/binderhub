@@ -733,6 +733,8 @@ class BuildHandler(BaseHandler):
             if self.settings["auth_enabled"]:
                 # get logged in user's name
                 user_model = self.hub_auth.get_user(self)
+                if user_model is None:
+                    user_model = self.get_current_user()
                 username = user_model["name"]
                 if launcher.allow_named_servers:
                     # user can launch multiple servers, so create a unique server name
@@ -764,7 +766,7 @@ class BuildHandler(BaseHandler):
                 for key, values in self.request.query_arguments.items():
                     if not key.startswith('useropt.'):
                         continue
-                    log('extra_args: {}={}'.format(key, values))
+                    app_log.debug('extra_args: {}={}'.format(key, values))
                     extra_args[key[8:]] = '\t'.join([v.decode('utf8') for v in values])
                 server_info = await launcher.launch(
                     image=self.image_name,

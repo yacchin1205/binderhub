@@ -17,8 +17,8 @@ nodeSelector: {}
 tolerations: []
 
 image:
-  name: gcr.io/nii-ap-ops/k8s-binderhub-binderhub
-  tag: "set-by-chartpress"
+  name: yacchin1205/cs-k8s-binderhub-binderhub
+  tag: "0.2.1-0.dev.git.2399.h2c5072e"
   pullPolicy: ""
   pullSecrets: []
 
@@ -342,16 +342,14 @@ ingress:
     type: kube-lego
   hosts: []
   ingressClassName:
-  annotations:
-    {}
+  annotations: {}
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
   pathSuffix:
     # Suffix added to Ingress's routing path pattern.
     # Specify `*` if your ingress matches path by glob pattern.
   pathType: Prefix
-  tls:
-    []
+  tls: []
     # Secrets must be manually created in the namespace.
     # - secretName: chart-example-tls
     #   hosts:

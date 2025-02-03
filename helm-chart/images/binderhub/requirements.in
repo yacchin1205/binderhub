@@ -9,7 +9,11 @@ google-cloud-logging==3.*
 
 # jupyterhub and kubernetes is pinned to match the JupyterHub Helm chart's
 # version of jupyterhub
-git+https://github.com/RCOSDP/CS-jupyterhub.git@master
+git+https://github.com/RCOSDP/CS-jupyterhub.git@5.2.1
+
+# Workaround: Added a dependecy of ruamel-yaml because jupyter-telemetry,
+# which has a dependency of ruamel-yaml, was removed from jupyterhub.
+ruamel.yaml>=0.17.30
 
 # https://github.com/kubernetes-client/python
 kubernetes==9.*

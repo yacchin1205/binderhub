@@ -10,6 +10,22 @@
 #
 FROM python:3.11-bullseye as build-stage
 
+# Workaround: CS-jupyterhub requires nodejs and npm to be installed.
+RUN apt-get update \
+ && apt-get upgrade --yes \
+ && apt-get install --yes curl gpg \
+ && rm -rf /var/lib/apt/lists/*
+RUN mkdir -p -m 0755 /etc/apt/keyrings
+RUN apt-get update
+RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+RUN chmod a+r /etc/apt/keyrings/nodesource.gpg
+ENV NODE_MAJOR=21
+RUN echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | \
+    tee /etc/apt/sources.list.d/nodesource.list
+RUN apt update
+RUN apt install -y nodejs
+RUN npm install --global yarn
+
 # Build wheels
 #
 # We set pip's cache directory and expose it across build stages via an
@@ -51,7 +67,20 @@ RUN apt-get update \
               # signals as sent before SIGKILL, for example when "docker stop"
               # or "kubectl delete pod" is run. By doing that the pod can
               # terminate very quickly.
+        curl gpg \
  && rm -rf /var/lib/apt/lists/*
+
+# Workaround: CS-jupyterhub requires nodejs and npm to be installed.
+RUN mkdir -p -m 0755 /etc/apt/keyrings
+RUN apt-get update
+RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+RUN chmod a+r /etc/apt/keyrings/nodesource.gpg
+ENV NODE_MAJOR=21
+RUN echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | \
+    tee /etc/apt/sources.list.d/nodesource.list
+RUN apt update
+RUN apt install -y nodejs
+RUN npm install --global yarn
 
 # install wheels built in the build stage
 COPY helm-chart/images/binderhub/requirements.txt /tmp/requirements.txt

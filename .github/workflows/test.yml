@@ -87,8 +87,8 @@ jobs:
           - k3s-channel: v1.29
             test: helm
             test-variation: upgrade
-            # upgrade-from represents a release channel, see: https://jupyterhub.github.io/helm-chart/info.json
-            upgrade-from: dev
+            # upgrade-from represents a release channel, see: https://rcosdp.github.io/CS-jhub-helm-chart/info.json
+            upgrade-from: "0.2.5-20240404-03"
             upgrade-from-extra-args: ""
 
     services:
@@ -262,9 +262,9 @@ jobs:
           cd ci
 
           if [ ${{ matrix.upgrade-from }} = stable ]; then
-            UPGRADE_FROM_VERSION=$(helm show chart --repo=https://hub.jupyter.org/helm-chart/ binderhub | yq e '.version' -)
+            UPGRADE_FROM_VERSION=$(helm show chart --repo=https://rcosdp.github.io/CS-jhub-helm-chart/ binderhub | yq e '.version' -)
           elif [ ${{ matrix.upgrade-from }} = dev ]; then
-            UPGRADE_FROM_VERSION=$(helm show chart --devel --repo=https://hub.jupyter.org/helm-chart/ binderhub | yq e '.version' -)
+            UPGRADE_FROM_VERSION=$(helm show chart --devel --repo=https://rcosdp.github.io/CS-jhub-helm-chart/ binderhub | yq e '.version' -)
           else
             UPGRADE_FROM_VERSION=${{ matrix.upgrade-from }}
           fi
@@ -281,7 +281,7 @@ jobs:
           fi
 
           helm install binderhub-test \
-              --repo https://jupyterhub.github.io/helm-chart/ binderhub \
+              --repo https://rcosdp.github.io/CS-jhub-helm-chart/ binderhub \
               --disable-openapi-validation \
               --version=$UPGRADE_FROM_VERSION \
               --values "$old_config" \

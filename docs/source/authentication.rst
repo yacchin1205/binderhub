@@ -32,7 +32,6 @@ you need to add the following into ``config.yaml``:
           <desired-authenticator-class>: {}
         services:
           binder:
-            oauth_client_id: service-binderhub
             oauth_no_confirm: true
             oauth_redirect_uri: "https://<binderhub_url>/oauth_callback"
             oauth_client_id: "service-binder-oauth-client-test"

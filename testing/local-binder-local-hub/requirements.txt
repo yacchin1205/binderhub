@@ -1,3 +1,3 @@
 dockerspawner>=12
-jupyter-repo2docker @ git+https://github.com/RCOSDP/CS-repo2docker.git@2026.07.2
+jupyter-repo2docker @ git+https://github.com/yacchin1205/repo2docker.git@feature/upstream-2026.04.0
 jupyterhub @ git+https://github.com/RCOSDP/CS-jupyterhub.git@5.2.1
